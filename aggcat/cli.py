@@ -6,6 +6,8 @@ import typer
 from rich.console import Console
 from rich.panel import Panel
 
+from aggcat import pipeline, report
+
 app = typer.Typer(
     name="aggcat",
     help="Aggregate code analysis tools and metrics in one place.",
@@ -29,23 +31,30 @@ def analyze(
         "-g",
         help="GitHub repository in 'owner/repo' format for API metrics.",
     ),
+    all_results: bool = typer.Option(
+        False,
+        "--all",
+        "-a",
+        help="Show all results instead of top 10.",
+    ),
 ) -> None:
     """Run all analysis tools against a repository and display a unified report."""
-    console.print(
-        Panel.fit(
-            f"[bold cyan]aggcat[/bold cyan] — analysing [green]{repo}[/green]",
-            border_style="cyan",
+    top_n = None if all_results else report.DEFAULT_TOP_N
+
+    result = pipeline.run(repo, github_repo=github_repo)
+
+    if output == "terminal":
+        report.render_terminal(result, top_n=top_n)
+    elif output == "json":
+        report.render_json(result, top_n=top_n)
+    elif output == "html":
+        report.render_html(result, top_n=top_n)
+    else:
+        console.print(
+            f"[red]Unknown output format '[bold]{output}[/bold]'. "
+            "Choose from: terminal, json, html.[/red]"
         )
-    )
-
-    # TODO: Pessoa 2 — plug static analysis pipeline here (pipeline.run_static)
-    # TODO: Pessoa 3 — plug git mining pipeline here (pipeline.run_git)
-
-    console.print(f"[yellow]Output format:[/yellow] {output}")
-    if github_repo:
-        console.print(f"[yellow]GitHub repo:[/yellow] {github_repo}")
-
-    console.print("[bold green]✓ Analysis complete.[/bold green]")
+        raise typer.Exit(code=1)
 
 
 @app.command()
