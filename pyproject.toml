@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "A CLI to aggregate code analysis tools and metrics in one place."
 readme = "README.md"
 license = { text = "MIT" }
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 authors = [
   { name = "Ari Gonçalves da Silva Filho" },
   { name = "Caio Rodrigues Costa" },
