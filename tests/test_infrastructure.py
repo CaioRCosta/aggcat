@@ -14,7 +14,7 @@ from aggcat.pipeline import AnalysisResult, run
 runner = CliRunner()
 
 
-# ── CLI tests ────────────────────────────────────────────────────────────────
+# CLI tests
 
 
 class TestCLIHelp:
@@ -64,7 +64,7 @@ class TestCLIAnalyze:
         assert "aggcat report" in result.output
 
 
-# ── Pipeline tests ────────────────────────────────────────────────────────────
+# Pipeline tests
 
 
 class TestPipeline:
@@ -96,3 +96,26 @@ class TestPipeline:
         (tmp_path / ".git").mkdir()
         result = run(str(tmp_path))
         assert result.errors == []
+
+# CLI extra tests (--all flag and invalid output)
+
+class TestCLIAnalyzeExtra:
+    def test_analyze_all_flag_exits_zero(self, tmp_path):
+        (tmp_path / ".git").mkdir()
+        result = runner.invoke(app, ["analyze", str(tmp_path), "--all"])
+        assert result.exit_code == 0
+
+    def test_analyze_all_flag_does_not_show_top_note(self, tmp_path):
+        (tmp_path / ".git").mkdir()
+        result = runner.invoke(app, ["analyze", str(tmp_path), "--all"])
+        assert "Showing top" not in result.output
+
+    def test_analyze_invalid_output_exits_nonzero(self, tmp_path):
+        (tmp_path / ".git").mkdir()
+        result = runner.invoke(app, ["analyze", str(tmp_path), "--output", "pdf"])
+        assert result.exit_code != 0
+
+    def test_analyze_invalid_output_shows_error_message(self, tmp_path):
+        (tmp_path / ".git").mkdir()
+        result = runner.invoke(app, ["analyze", str(tmp_path), "--output", "pdf"])
+        assert "Unknown output format" in result.output
