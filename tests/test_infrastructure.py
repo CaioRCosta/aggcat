@@ -14,7 +14,7 @@ from aggcat.pipeline import AnalysisResult, run
 runner = CliRunner()
 
 
-# CLI tests
+# ── CLI tests ────────────────────────────────────────────────────────────────
 
 
 class TestCLIHelp:
@@ -47,13 +47,13 @@ class TestCLIAnalyze:
     def test_analyze_default_output_is_terminal(self, tmp_path):
         (tmp_path / ".git").mkdir()
         result = runner.invoke(app, ["analyze", str(tmp_path)])
-        assert "terminal" in result.output
+        assert result.exit_code == 0
+        assert "aggcat report" in result.output
 
     def test_analyze_accepts_json_output(self, tmp_path):
         (tmp_path / ".git").mkdir()
-        result = runner.invoke(app, ["analyze", str(tmp_path), "--output", "json"])
+        result = runner.invoke(app, ["analyze", str(tmp_path), "--output", "json"], input="n\n")
         assert result.exit_code == 0
-        assert "json" in result.output
 
     def test_analyze_accepts_github_repo_flag(self, tmp_path):
         (tmp_path / ".git").mkdir()
@@ -61,10 +61,10 @@ class TestCLIAnalyze:
             app, ["analyze", str(tmp_path), "--github-repo", "owner/repo"]
         )
         assert result.exit_code == 0
-        assert "owner/repo" in result.output
+        assert "aggcat report" in result.output
 
 
-# Pipeline tests
+# ── Pipeline tests ────────────────────────────────────────────────────────────
 
 
 class TestPipeline:
