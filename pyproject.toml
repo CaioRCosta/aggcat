@@ -1,0 +1,50 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "aggcat"
+version = "0.1.0"
+description = "A CLI to aggregate code analysis tools and metrics in one place."
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.10"
+authors = [
+  { name = "Ari Gonçalves da Silva Filho" },
+  { name = "Caio Rodrigues Costa" },
+  { name = "Túlio Henrique Rodrigues Costa" },
+]
+dependencies = [
+  "typer>=0.12",
+  "rich>=13",
+  "pydriller>=2.6",
+  "gitpython>=3.1",
+  "PyGithub>=2.3",
+  "lizard>=1.17",
+  "radon>=6.0",
+  "flake8>=7.0",
+  "bandit>=1.7",
+  "tree-sitter>=0.23",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0",
+  "pytest-cov>=5.0",
+  "pytest-mock>=3.14",
+]
+
+[project.scripts]
+aggcat = "aggcat.cli:app"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["aggcat*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --tb=short"
+
+[tool.coverage.run]
+source = ["aggcat"]
+omit = ["tests/*"]
