@@ -18,7 +18,7 @@ def complex_function():
 
     assert len(result) == 1
     assert result[0]["file"] == "deep.py"
-    assert "profundidade: 4" in result[0]["issue"]
+    assert "depth: 4" in result[0]["issue"]
 
 
 def test_run_ast_nesting_ignores_shallow_code(tmp_path):
