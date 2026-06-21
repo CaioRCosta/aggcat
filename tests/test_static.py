@@ -124,7 +124,7 @@ def test_run_lizard_parses_warnings(mock_run, tmp_path):
     result = analyzer.run_lizard(tmp_path)
     
     assert len(result) == 2
-    assert result[0]["file"] == "src/math.py"
+    assert result[0]["file"] == "src/math.py:50"
     assert "12 CCN" in result[0]["issue"]
 
 @patch("subprocess.run")
