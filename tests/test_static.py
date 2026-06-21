@@ -135,3 +135,47 @@ def test_run_lizard_empty_output(mock_run, tmp_path):
     
     result = analyzer.run_lizard(tmp_path)
     assert result == []
+
+
+def test_run_ast_nesting_detects_deep_nesting(tmp_path):
+    code = '''
+def complex_function():
+    if True:
+        for i in range(10):
+            while True:
+                try:
+                    pass
+                except:
+                    pass
+'''
+    test_file = tmp_path / "deep.py"
+    test_file.write_text(code, encoding="utf-8")
+    
+    result = analyzer.run_ast_nesting(tmp_path)
+    
+    assert len(result) == 1
+    assert result[0]["file"] == "deep.py"
+    assert "profundidade: 4" in result[0]["issue"]
+
+
+def test_run_ast_nesting_ignores_shallow_code(tmp_path):
+    code = '''
+def simple_function():
+    if True:
+        pass
+'''
+    test_file = tmp_path / "simple.py"
+    test_file.write_text(code, encoding="utf-8")
+    
+    result = analyzer.run_ast_nesting(tmp_path)
+    
+    assert len(result) == 0
+
+
+def test_run_ast_nesting_ignores_syntax_errors(tmp_path):
+    test_file = tmp_path / "broken.py"
+    test_file.write_text("def quebrado(:::", encoding="utf-8")
+    
+    result = analyzer.run_ast_nesting(tmp_path)
+    
+    assert len(result) == 0
