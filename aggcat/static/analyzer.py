@@ -110,6 +110,38 @@ def run_vulture(repo_path: Path) -> list[dict]:
         
     except FileNotFoundError:
         return []
+    
+def run_flake8(repo_path: Path) -> list[dict]:
+    """Executa o Flake8 para encontrar violações de estilo (PEP-8) e erros de sintaxe"""
+    try:
+        # Executa o flake8 ignorando os ambientes virtuais
+        result = subprocess.run(
+            ["flake8", str(repo_path), "--exclude", "venv,.venv"],
+            capture_output=True,
+            text=True,
+            check=False
+        )
+        
+        if not result.stdout.strip():
+            return []
+            
+        style_issues = []
+        # Saída padrão do Flake8: "caminho_arquivo.py:linha:coluna: CODIGO Mensagem"
+        for line in result.stdout.splitlines():
+            # Divide a string em no máximo 4 partes: arquivo, linha, coluna, erro
+            parts = line.split(":", 3)
+            if len(parts) == 4:
+                filepath = parts[0].strip()
+                error_details = parts[3].strip()
+                style_issues.append({
+                    "file": filepath,
+                    "issue": error_details
+                })
+                
+        return style_issues
+        
+    except FileNotFoundError:
+        return []
 
 def run(repo_path: str | Path) -> dict:
     path = Path(repo_path).resolve()
@@ -118,4 +150,5 @@ def run(repo_path: str | Path) -> dict:
         "maintainability": run_radon(path),
         "security": run_bandit(path),
         "dead_code": run_vulture(path),
+        "style": run_flake8(path),
     }
