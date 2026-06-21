@@ -30,9 +30,9 @@ def _top(items: list, n: int | None) -> list:
 
 def _ask_save(data: str, default_filename: str) -> None:
     answer = console.input(
-        f"\n[bold]Save to file?[/bold] [dim](default: {default_filename})[/dim] [y/n]: "
+        f"\n[bold]Save to file?[/bold] Y/n: "
     ).strip().lower()
-    if answer == "y":
+    if answer == "y" or answer == "":
         filename = console.input(
             f"[bold]Filename[/bold] [dim](press Enter for '{default_filename}')[/dim]: "
         ).strip()
@@ -101,7 +101,7 @@ def _render_truck_factor(truck: list[dict], top_n: int | None) -> None:
 
 # Dynamic Static Tools Terminal/HTML Rendering
 
-def render_terminal(result: AnalysisResult, top_n: int | None = DEFAULT_TOP_N) -> None:
+def render_terminal(result: AnalysisResult, top_n: int | None = None) -> None:
     """Render the full report to the terminal."""
     console.print()
     console.print(
@@ -146,7 +146,7 @@ def render_terminal(result: AnalysisResult, top_n: int | None = DEFAULT_TOP_N) -
 # JSON report
 
 
-def render_json(result: AnalysisResult, top_n: int | None = DEFAULT_TOP_N) -> None:
+def render_json(result: AnalysisResult, top_n: int | None = None) -> None:
     data: dict[str, Any] = {
         "repo": result.repo_path,
         "static": result.static,
@@ -247,7 +247,7 @@ def _build_html(result: AnalysisResult, top_n: int | None) -> str:
 </html>"""
 
 
-def render_html(result: AnalysisResult, top_n: int | None = DEFAULT_TOP_N) -> None:
+def render_html(result: AnalysisResult, top_n: int | None = None) -> None:
     html = _build_html(result, top_n)
     console.print("[dim]HTML report generated.[/dim]")
     _ask_save(html, "aggcat-report.html")

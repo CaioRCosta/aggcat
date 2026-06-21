@@ -194,18 +194,21 @@ def analyze(
         "-g",
         help="GitHub repository in 'owner/repo' format for API metrics.",
     ),
-    all_results: bool = typer.Option(
+    top_n: int = typer.Option(
+        None,
+        "--top-n",
+        "-n",
+        help="Limit results to top N items per section. Shows all results by default.",
+    ),
+    all_tools: bool = typer.Option(
         False,
         "--all",
         "-a",
-        help="Show all results instead of top 10.",
+        help="Run all tools without the interactive selector.",
     ),
 ) -> None:
-    top_n = None if all_results else report.DEFAULT_TOP_N
-
-    selected_tools = None
-    if not all_results:
-        selected_tools = select_tools_interactive()
+    from src.analyzer import TOOLS
+    selected_tools = TOOLS if all_tools else select_tools_interactive()
 
     result = pipeline.run(repo, github_repo=github_repo, selected_tools=selected_tools)
 

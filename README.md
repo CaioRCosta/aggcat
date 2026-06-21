@@ -87,33 +87,80 @@ aggcat --help
 
 ## Usage
 
-### Analyze a local repository
+### Commands
 
-```bash
-aggcat analyze /path/to/your/repo
+| Command | Description |
+|:---|:---|
+| `aggcat analyze <repo>` | Analyze a local Git repository |
+| `aggcat config show` | Show current tool configuration |
+| `aggcat config set <tool> <key> <value>` | Override a tool configuration constant |
+| `aggcat config reset` | Reset all configuration to defaults |
+| `aggcat version` | Print the installed version |
+
+---
+
+### `aggcat analyze`
+
+```
+aggcat analyze [OPTIONS] REPO
 ```
 
-### Analyze with a specific output format
+| Option | Short | Default | Description |
+|:---|:---|:---|:---|
+| `--output` | `-o` | `terminal` | Output format: `terminal` \| `json` \| `html` |
+| `--github-repo` | `-g` | — | GitHub repository (`owner/repo`) for API metrics |
+| `--top-n` | `-n` | all | Limit results to top N items per section |
+| `--all` | `-a` | `false` | Run all tools, skipping the interactive selector |
+
+By default, `aggcat analyze` opens an **interactive tool selector** where you can pick which tools to run using arrow keys, Space to toggle, and Enter to confirm.
+
+#### Examples
 
 ```bash
-# Terminal output (default)
-aggcat analyze /path/to/repo --output terminal
+# Interactive selector, all results shown
+aggcat analyze /path/to/repo
 
-# JSON report
+# Skip selector — run all tools at once
+aggcat analyze /path/to/repo --all
+
+# Output as HTML report
+aggcat analyze /path/to/repo --output html
+
+# Output as JSON
 aggcat analyze /path/to/repo --output json
 
-# HTML report
-aggcat analyze /path/to/repo --output html
-```
+# Limit each section to top 10 results
+aggcat analyze /path/to/repo --top-n 10
 
-### Include GitHub metrics (requires a token)
+# Skip selector, limit to top 5, output HTML
+aggcat analyze /path/to/repo --all --top-n 5 --output html
 
-```bash
+# Include GitHub API metrics (requires GITHUB_TOKEN)
 export GITHUB_TOKEN=your_token_here
 aggcat analyze /path/to/repo --github-repo owner/repo-name
 ```
 
-### Example output
+---
+
+### `aggcat config`
+
+Some tools expose configurable thresholds and constants that you can tune per-project.
+
+```bash
+# See all configurable values and their current/default state
+aggcat config show
+
+# Override a value (cast automatically to the correct type)
+aggcat config set lizard max_ccn 15
+aggcat config set radon mi_threshold 65.0
+
+# Reset everything back to defaults
+aggcat config reset
+```
+
+---
+
+### Example terminal output
 
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
