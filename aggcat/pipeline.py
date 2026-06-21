@@ -38,9 +38,8 @@ def run(repo_path: str, github_repo: str | None = None) -> AnalysisResult:
 
     result = AnalysisResult(repo_path=str(path))
 
-    # --- Static analysis (Pessoa 2) ---
-    # from aggcat.static import analyzer
-    # result.static = analyzer.run(path)
+    from aggcat.static import analyzer
+    result.static = analyzer.run(path)
 
     # --- Git mining (Pessoa 3) ---
     # from aggcat.git import miner

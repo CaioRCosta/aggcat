@@ -1,0 +1,4 @@
+radon
+bandit
+pytest
+typer
