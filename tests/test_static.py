@@ -4,7 +4,12 @@ import json
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 
-from src.static import analyzer
+from src.tools.radon_tool import RadonTool
+from src.tools.bandit_tool import BanditTool
+from src.tools.vulture_tool import VultureTool
+from src.tools.flake8_tool import Flake8Tool
+from src.tools.lizard_tool import LizardTool
+from src.tools.ast_nesting_tool import AstNestingTool
 
 @patch("subprocess.run")
 def test_run_radon_parses_json(mock_run, tmp_path):
@@ -16,11 +21,12 @@ def test_run_radon_parses_json(mock_run, tmp_path):
     mock_result.stdout = fake_radon_output
     mock_run.return_value = mock_result
     
-    result = analyzer.run_radon(tmp_path)
+    result = RadonTool().run(tmp_path)
     
     assert len(result) == 1
     assert result[0]["file"] == "src/app.py"
     assert result[0]["mi"] == 45.33
+
 
 @patch("subprocess.run")
 def test_run_radon_empty_output(mock_run, tmp_path):
@@ -28,7 +34,7 @@ def test_run_radon_empty_output(mock_run, tmp_path):
     mock_result.stdout = " "
     mock_run.return_value = mock_result
     
-    result = analyzer.run_radon(tmp_path)
+    result = RadonTool().run(tmp_path)
     assert result == []
 
 
@@ -47,11 +53,12 @@ def test_run_bandit_parses_json(mock_run, tmp_path):
     mock_result.stdout = fake_bandit_output
     mock_run.return_value = mock_result
     
-    result = analyzer.run_bandit(tmp_path)
+    result = BanditTool().run(tmp_path)
     
     assert len(result) == 1
     assert result[0]["severity"] == "HIGH"
     assert "Hardcoded" in result[0]["issue"]
+
 
 @patch("subprocess.run")
 def test_run_bandit_empty_output(mock_run, tmp_path):
@@ -59,7 +66,7 @@ def test_run_bandit_empty_output(mock_run, tmp_path):
     mock_result.stdout = ""
     mock_run.return_value = mock_result
     
-    result = analyzer.run_bandit(tmp_path)
+    result = BanditTool().run(tmp_path)
     assert result == []
 
 
@@ -71,12 +78,13 @@ def test_run_vulture_parses_text(mock_run, tmp_path):
     mock_result.stdout = fake_vulture_output
     mock_run.return_value = mock_result
     
-    result = analyzer.run_vulture(tmp_path)
+    result = VultureTool().run(tmp_path)
     
     assert len(result) == 2
     assert result[0]["file"] == "src/utils.py"
     assert "unused function 'helper'" in result[0]["issue"]
     assert result[1]["file"] == "src/main.py"
+
 
 @patch("subprocess.run")
 def test_run_vulture_empty_output(mock_run, tmp_path):
@@ -84,7 +92,7 @@ def test_run_vulture_empty_output(mock_run, tmp_path):
     mock_result.stdout = ""
     mock_run.return_value = mock_result
     
-    result = analyzer.run_vulture(tmp_path)
+    result = VultureTool().run(tmp_path)
     assert result == []
 
 
@@ -96,12 +104,13 @@ def test_run_flake8_parses_text(mock_run, tmp_path):
     mock_result.stdout = fake_flake8_output
     mock_run.return_value = mock_result
     
-    result = analyzer.run_flake8(tmp_path)
+    result = Flake8Tool().run(tmp_path)
     
     assert len(result) == 2
     assert result[0]["file"] == "src/app.py"
     assert "E302 expected 2 blank lines" in result[0]["issue"]
     assert result[1]["file"] == "src/utils.py"
+
 
 @patch("subprocess.run")
 def test_run_flake8_empty_output(mock_run, tmp_path):
@@ -109,7 +118,7 @@ def test_run_flake8_empty_output(mock_run, tmp_path):
     mock_result.stdout = ""
     mock_run.return_value = mock_result
     
-    result = analyzer.run_flake8(tmp_path)
+    result = Flake8Tool().run(tmp_path)
     assert result == []
 
 
@@ -121,11 +130,12 @@ def test_run_lizard_parses_warnings(mock_run, tmp_path):
     mock_result.stdout = fake_lizard_output
     mock_run.return_value = mock_result
     
-    result = analyzer.run_lizard(tmp_path)
+    result = LizardTool().run(tmp_path)
     
     assert len(result) == 2
     assert result[0]["file"] == "src/math.py:50"
     assert "12 CCN" in result[0]["issue"]
+
 
 @patch("subprocess.run")
 def test_run_lizard_empty_output(mock_run, tmp_path):
@@ -133,7 +143,7 @@ def test_run_lizard_empty_output(mock_run, tmp_path):
     mock_result.stdout = ""
     mock_run.return_value = mock_result
     
-    result = analyzer.run_lizard(tmp_path)
+    result = LizardTool().run(tmp_path)
     assert result == []
 
 
@@ -151,7 +161,7 @@ def complex_function():
     test_file = tmp_path / "deep.py"
     test_file.write_text(code, encoding="utf-8")
     
-    result = analyzer.run_ast_nesting(tmp_path)
+    result = AstNestingTool().run(tmp_path)
     
     assert len(result) == 1
     assert result[0]["file"] == "deep.py"
@@ -167,7 +177,7 @@ def simple_function():
     test_file = tmp_path / "simple.py"
     test_file.write_text(code, encoding="utf-8")
     
-    result = analyzer.run_ast_nesting(tmp_path)
+    result = AstNestingTool().run(tmp_path)
     
     assert len(result) == 0
 
@@ -176,6 +186,6 @@ def test_run_ast_nesting_ignores_syntax_errors(tmp_path):
     test_file = tmp_path / "broken.py"
     test_file.write_text("def quebrado(:::", encoding="utf-8")
     
-    result = analyzer.run_ast_nesting(tmp_path)
+    result = AstNestingTool().run(tmp_path)
     
     assert len(result) == 0

@@ -17,7 +17,7 @@ def run(repo_path: str, github_repo: str | None = None) -> AnalysisResult:
 
     result = AnalysisResult(repo_path=str(path))
 
-    from src.static import analyzer
+    from src import analyzer
     result.static = analyzer.run(path)
 
     # TODO
