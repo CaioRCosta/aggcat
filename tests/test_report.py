@@ -1,9 +1,5 @@
-"""Tests for the reporting functions and formatters."""
-
 import json
 from unittest.mock import patch
-
-import pytest
 
 from src.report import (
     _severity_color,
