@@ -30,9 +30,9 @@ def _top(items: list, n: int | None) -> list:
 
 def _ask_save(data: str, default_filename: str) -> None:
     answer = console.input(
-        f"\n[bold]Save to file?[/bold] [dim](default: {default_filename})[/dim] [y/n]: "
+        f"\n[bold]Save to file?[/bold] Y/n: "
     ).strip().lower()
-    if answer == "y":
+    if answer == "y" or answer == "":
         filename = console.input(
             f"[bold]Filename[/bold] [dim](press Enter for '{default_filename}')[/dim]: "
         ).strip()
