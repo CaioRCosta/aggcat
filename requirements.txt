@@ -2,3 +2,8 @@ radon
 bandit
 pytest
 typer
+flake8
+lizard
+vulture
+tree-sitter
+tree-sitter-python
