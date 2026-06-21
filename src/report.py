@@ -1,7 +1,3 @@
-"""aggcat report — formats and displays analysis results."""
-
-from __future__ import annotations
-
 import json
 from pathlib import Path
 from typing import Any
@@ -12,18 +8,15 @@ from rich.table import Table
 from rich import box
 from rich.text import Text
 
-from aggcat.pipeline import AnalysisResult
+from src.pipeline import AnalysisResult
 
 console = Console()
 
 DEFAULT_TOP_N = 10
 
-
 # Helpers
 
-
 def _severity_color(value: float, low: float, high: float) -> str:
-    """Return a color based on thresholds: green → yellow → red."""
     if value <= low:
         return "green"
     if value <= high:
@@ -32,12 +25,10 @@ def _severity_color(value: float, low: float, high: float) -> str:
 
 
 def _top(items: list, n: int | None) -> list:
-    """Return the first n items, or all if n is None."""
     return items if n is None else items[:n]
 
 
 def _ask_save(data: str, default_filename: str) -> None:
-    """Ask the user if they want to save output to a file."""
     answer = console.input(
         f"\n[bold]Save to file?[/bold] [dim](default: {default_filename})[/dim] [y/n]: "
     ).strip().lower()
@@ -206,7 +197,6 @@ def render_terminal(result: AnalysisResult, top_n: int | None = DEFAULT_TOP_N) -
 
 
 def render_json(result: AnalysisResult, top_n: int | None = DEFAULT_TOP_N) -> None:
-    """Print the result as JSON and optionally save to file."""
     data: dict[str, Any] = {
         "repo": result.repo_path,
         "static": result.static,
@@ -231,7 +221,6 @@ def render_json(result: AnalysisResult, top_n: int | None = DEFAULT_TOP_N) -> No
 
 
 def _build_html(result: AnalysisResult, top_n: int | None) -> str:
-    """Build a self-contained HTML report string."""
     static = result.static
     git = result.git
 

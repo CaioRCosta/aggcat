@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 
-from aggcat.static import analyzer
+from src.static import analyzer
 
 @patch("subprocess.run")
 def test_run_radon_parses_json(mock_run, tmp_path):

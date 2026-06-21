@@ -8,8 +8,8 @@ from unittest.mock import patch
 import pytest
 from typer.testing import CliRunner
 
-from aggcat.cli import app
-from aggcat.pipeline import AnalysisResult, run
+from src.cli import app
+from src.pipeline import AnalysisResult, run
 
 runner = CliRunner()
 

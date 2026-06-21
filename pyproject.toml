@@ -35,11 +35,11 @@ dev = [
 ]
 
 [project.scripts]
-aggcat = "aggcat.cli:app"
+aggcat = "src.cli:app"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["aggcat*"]
+include = ["src*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

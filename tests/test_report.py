@@ -8,8 +8,8 @@ from unittest.mock import patch, MagicMock
 import pytest
 from rich.console import Console
 
-from aggcat.pipeline import AnalysisResult
-from aggcat.report import (
+from src.pipeline import AnalysisResult
+from src.report import (
     DEFAULT_TOP_N,
     _severity_color,
     _top,

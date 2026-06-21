@@ -6,14 +6,14 @@ from pathlib import Path
 import json
 import subprocess
 
-from aggcat import config
-from aggcat.static.visitors import NestingDepthVisitor
-from aggcat.static.utils import _run_subprocess
+from src import config
+from src.static.visitors import NestingDepthVisitor
+from src.static.utils import run_subprocess
 
 def run_radon(repo_path: Path) -> list[dict]:
     """Executa o Radon para calcular o índice de manutenibilidade (MI)"""
     try:
-        stdout = _run_subprocess(["radon", "mi", "-j", "-i", "venv,.venv", str(repo_path)])
+        stdout = run_subprocess(["radon", "mi", "-j", "-i", "venv,.venv", str(repo_path)])
         if not stdout:
             return []
             
@@ -37,7 +37,7 @@ def run_bandit(repo_path: Path) -> list[dict]:
     """Executa o Bandit para encontrar falhas de segurança"""
     try:
         # A flag -x exclui diretórios e -f json formata a saída
-        stdout = _run_subprocess(["bandit", "-r", str(repo_path), "-x", "venv,.venv", "-f", "json"])
+        stdout = run_subprocess(["bandit", "-r", str(repo_path), "-x", "venv,.venv", "-f", "json"])
         if not stdout:
             return []
             
@@ -69,7 +69,7 @@ def run_vulture(repo_path: Path) -> list[dict]:
     """Executa o Vulture para encontrar código morto"""
     try:
         # O Vulture não tem saída nativa em JSON, então faz o parsing do texto puro
-        stdout = _run_subprocess([
+        stdout = run_subprocess([
             "vulture", 
             str(repo_path), 
             "--min-confidence", 
@@ -99,7 +99,7 @@ def run_flake8(repo_path: Path) -> list[dict]:
     """Executa o Flake8 para encontrar violações de estilo (PEP-8) e erros de sintaxe"""
     try:
         # Executa o flake8 ignorando os ambientes virtuais
-        stdout = _run_subprocess(["flake8", str(repo_path), "--exclude", "venv,.venv"])
+        stdout = run_subprocess(["flake8", str(repo_path), "--exclude", "venv,.venv"])
         if not stdout:
             return []
             
@@ -126,7 +126,7 @@ def run_lizard(repo_path: Path) -> list[dict]:
     try:
         # -C define o limite de complexidade
         # -w faz imprimir apenas os warnings (funções muito complexas)
-        stdout = _run_subprocess([
+        stdout = run_subprocess([
             "lizard", 
             str(repo_path), 
             "-C", str(config.CC_LOW), 

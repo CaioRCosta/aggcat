@@ -1,11 +1,3 @@
-"""aggcat global configuration and thresholds.
-
-All analysis modules should import thresholds from here
-to ensure consistency across the report.
-"""
-
-from __future__ import annotations
-
 # Reports defaults
 
 # Number of results shown per section by default (overridden by --all)
