@@ -1,8 +1,12 @@
-from unittest.mock import patch
+from io import StringIO
+from unittest.mock import patch, MagicMock
 
 import pytest
+import typer
 from typer.testing import CliRunner
 
+import src.cli as cli_module
+from src.analyzer import TOOLS
 from src.cli import app
 from src.pipeline import AnalysisResult
 
@@ -96,8 +100,8 @@ class TestCLIAnalyze:
 @pytest.mark.xdist_group("config")
 class TestCLIConfig:
     @pytest.fixture(autouse=True)
-    def reset_config(self):
-        runner.invoke(app, ["config", "reset"])
+    def reset_config(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
         yield
         runner.invoke(app, ["config", "reset"])
 
@@ -115,6 +119,22 @@ class TestCLIConfig:
         show_result = runner.invoke(app, ["config", "show"])
         assert "cc_low = 15" in show_result.output
 
+    def test_config_set_float_value(self):
+        result = runner.invoke(app, ["config", "set", "radon", "mi_grade_a", "65.5"])
+        assert result.exit_code == 0
+        show_result = runner.invoke(app, ["config", "show"])
+        assert "mi_grade_a = 65.5" in show_result.output
+
+    def test_config_set_invalid_value_type_fails(self):
+        result = runner.invoke(app, ["config", "set", "lizard", "cc_low", "notanumber"])
+        assert result.exit_code != 0
+        assert "could not be cast" in result.output
+
+    def test_config_set_invalid_tool_fails(self):
+        result = runner.invoke(app, ["config", "set", "nonexistent_tool", "cc_low", "15"])
+        assert result.exit_code != 0
+        assert "not configurable" in result.output
+
     def test_config_set_invalid_key_fails(self):
         result = runner.invoke(app, ["config", "set", "lizard", "non_existent_key", "15"])
         assert result.exit_code != 0
@@ -127,3 +147,84 @@ class TestCLIConfig:
 
         show_result = runner.invoke(app, ["config", "show"])
         assert "cc_low = 10" in show_result.output
+
+
+class TestGetChar:
+    def test_fallback_when_not_tty(self):
+        with patch.object(cli_module, "tty", None), \
+             patch("sys.stdin", StringIO("x")):
+            assert cli_module.get_char() == "x"
+
+    def test_fallback_when_stdin_not_tty(self):
+        mock_stdin = MagicMock()
+        mock_stdin.isatty.return_value = False
+        mock_stdin.read.return_value = "a"
+        with patch("sys.stdin", mock_stdin):
+            assert cli_module.get_char() == "a"
+
+    def test_tty_reads_regular_char(self):
+        mock_tty = MagicMock()
+        mock_termios = MagicMock()
+        mock_termios.tcgetattr.return_value = []
+        mock_stdin = MagicMock()
+        mock_stdin.isatty.return_value = True
+        mock_stdin.fileno.return_value = 0
+        mock_stdin.read.return_value = "z"
+        with patch.object(cli_module, "tty", mock_tty), \
+             patch.object(cli_module, "termios", mock_termios), \
+             patch("sys.stdin", mock_stdin):
+            assert cli_module.get_char() == "z"
+
+    def test_tty_reads_escape_sequence(self):
+        mock_tty = MagicMock()
+        mock_termios = MagicMock()
+        mock_termios.tcgetattr.return_value = []
+        mock_stdin = MagicMock()
+        mock_stdin.isatty.return_value = True
+        mock_stdin.fileno.return_value = 0
+        mock_stdin.read.side_effect = ["\x1b", "[A"]
+        with patch.object(cli_module, "tty", mock_tty), \
+             patch.object(cli_module, "termios", mock_termios), \
+             patch("sys.stdin", mock_stdin):
+            assert cli_module.get_char() == "\x1b[A"
+
+
+class TestSelectToolsInteractive:
+    @pytest.fixture(autouse=True)
+    def tty_active(self):
+        with patch("sys.stdin") as mock_stdin, \
+             patch("sys.stdout"):
+            mock_stdin.isatty.return_value = True
+            self.mock_stdin = mock_stdin
+            yield
+
+    def _run(self, keys):
+        with patch.object(cli_module, "get_char", side_effect=keys):
+            return cli_module.select_tools_interactive()
+
+    def test_enter_returns_all_tools(self):
+        result = self._run(["\r"])
+        assert result == TOOLS
+
+    def test_space_deselects_first_tool(self):
+        result = self._run([" ", "\r"])
+        assert TOOLS[0] not in result
+        assert len(result) == len(TOOLS) - 1
+
+    def test_down_then_enter_returns_all(self):
+        result = self._run(["\x1b[B", "\r"])
+        assert result == TOOLS
+
+    def test_up_wraps_to_last_tool(self):
+        result = self._run(["\x1b[A", " ", "\r"])
+        assert TOOLS[-1] not in result
+
+    def test_deselect_all_raises_exit(self):
+        # Space deselects current, Down moves to next — repeat for all tools
+        keys = ([" ", "\x1b[B"] * len(TOOLS))[:-1] + ["\r"]
+        with pytest.raises(typer.Exit):
+            self._run(keys)
+
+    def test_ctrl_c_calls_sys_exit(self):
+        with pytest.raises(SystemExit):
+            self._run(["\x03"])
