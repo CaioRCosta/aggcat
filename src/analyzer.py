@@ -16,9 +16,10 @@ TOOLS = [
     AstNestingTool()
 ]
 
-def run(repo_path: str | Path) -> dict:
+def run(repo_path: str | Path, selected_tools: list = None) -> dict:
     path = Path(repo_path).resolve()
     results = {}
-    for tool in TOOLS:
+    tools_to_run = selected_tools if selected_tools is not None else TOOLS
+    for tool in tools_to_run:
         results[tool.name] = tool.run(path)
     return results

@@ -248,7 +248,6 @@ def _build_html(result: AnalysisResult, top_n: int | None) -> str:
 
 
 def render_html(result: AnalysisResult, top_n: int | None = DEFAULT_TOP_N) -> None:
-    """Print an HTML summary and optionally save to file."""
     html = _build_html(result, top_n)
     console.print("[dim]HTML report generated.[/dim]")
     _ask_save(html, "aggcat-report.html")
