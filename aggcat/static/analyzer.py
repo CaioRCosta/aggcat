@@ -5,6 +5,8 @@ from pathlib import Path
 import json
 import subprocess
 
+from aggcat import config
+
 def run_radon(repo_path: Path) -> list[dict]:
     """Executa o Radon para calcular o índice de manutenibilidade (MI)"""
     try:
@@ -32,11 +34,51 @@ def run_radon(repo_path: Path) -> list[dict]:
         
     except (FileNotFoundError, json.JSONDecodeError):
         return []
+    
+def run_bandit(repo_path: Path) -> list[dict]:
+    """Executa o Bandit para encontrar falhas de segurança"""
+    try:
+        # A flag -x exclui diretórios e -f json formata a saída
+        # O Bandit retorna código de erro se achar vulnerabilidades,
+        # por isso check=False
+        result = subprocess.run(
+            ["bandit", "-r", str(repo_path), "-x", "venv,.venv", "-f", "json"],
+            capture_output=True,
+            text=True,
+            check=False
+        )
+        
+        if not result.stdout.strip():
+            return []
+            
+        data = json.loads(result.stdout)
+        security_issues = []
+        
+        for issue in data.get("results", []):
+            severity = issue.get("issue_severity", config.SEVERITY_LOW)
+            security_issues.append({
+                "file": issue.get("filename", ""),
+                "severity": severity,
+                "issue": issue.get("issue_text", "")
+            })
+            
+        # Ordena colocando os de alta severidade no topo da lista
+        severity_order = {
+            config.SEVERITY_HIGH: 0, 
+            config.SEVERITY_MEDIUM: 1, 
+            config.SEVERITY_LOW: 2
+        }
+        security_issues.sort(key=lambda x: severity_order.get(x["severity"], 3))
+        
+        return security_issues
+        
+    except (FileNotFoundError, json.JSONDecodeError):
+        return []
 
 def run(repo_path: str | Path) -> dict:
     path = Path(repo_path).resolve()
     
     return {
         "maintainability": run_radon(path),
-        "security": [],
+        "security": run_bandit(path),
     }
