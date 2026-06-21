@@ -16,6 +16,11 @@ class BaseTool(ABC):
         """A brief description of the tool and what it measures."""
         pass
 
+    @property
+    def defaults(self) -> Dict[str, Any]:
+        """Default configuration parameters for the tool."""
+        return {}
+
     @abstractmethod
     def run(self, repo_path: Path) -> List[Dict[str, Any]]:
         """Executes the analysis tool and returns a list of dictionaries with results."""

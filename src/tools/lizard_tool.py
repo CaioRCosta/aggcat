@@ -6,24 +6,34 @@ from rich import box
 
 from src.base_tool import BaseTool
 from src.tools.utils import run_subprocess
+from src.config import load_config
 
 class LizardTool(BaseTool):
-    CC_LOW = 10
-
     @property
     def name(self) -> str:
         return "lizard"
     
     @property
     def description(self) -> str:
-        return "Calculates cyclomatic complexity warnings for Python files using Lizard."
+        return "Executes Lizard to calculate cyclomatic complexity warnings."
+
+    @property
+    def defaults(self) -> Dict[str, Any]:
+        return {
+            "cc_low": 10,
+        }
+
+    def _get_config(self, key: str) -> Any:
+        user_config = load_config()
+        return user_config.get(self.name, {}).get(key, self.defaults.get(key))
 
     def run(self, repo_path: Path) -> List[Dict[str, Any]]:
+        cc_low = self._get_config("cc_low")
         try:
             stdout = run_subprocess([
                 "lizard", 
                 str(repo_path), 
-                "-C", str(self.CC_LOW), 
+                "-C", str(cc_low), 
                 "-w", 
                 "-x", "*/venv/*", 
                 "-x", "*/.venv/*"

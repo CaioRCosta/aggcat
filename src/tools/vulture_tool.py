@@ -6,25 +6,35 @@ from rich import box
 
 from src.base_tool import BaseTool
 from src.tools.utils import run_subprocess
+from src.config import load_config
 
 class VultureTool(BaseTool):
-    VULTURE_MIN_CONFIDENCE = 80
-
     @property
     def name(self) -> str:
         return "vulture"
     
     @property
     def description(self) -> str:
-        return "Detects unused code (functions, classes, variables) using Vulture."
+        return "Executes Vulture to find unused code."
+
+    @property
+    def defaults(self) -> Dict[str, Any]:
+        return {
+            "min_confidence": 80,
+        }
+
+    def _get_config(self, key: str) -> Any:
+        user_config = load_config()
+        return user_config.get(self.name, {}).get(key, self.defaults.get(key))
 
     def run(self, repo_path: Path) -> List[Dict[str, Any]]:
+        min_confidence = self._get_config("min_confidence")
         try:
             stdout = run_subprocess([
                 "vulture", 
                 str(repo_path), 
                 "--min-confidence", 
-                str(self.VULTURE_MIN_CONFIDENCE),
+                str(min_confidence),
                 "--exclude", "venv,.venv"
             ])
             if not stdout:

@@ -6,6 +6,7 @@ from rich.table import Table
 from rich import box
 
 from src.base_tool import BaseTool
+from src.config import load_config
 
 class NestingDepthVisitor(ast.NodeVisitor):
     def __init__(self):
@@ -33,7 +34,19 @@ class AstNestingTool(BaseTool):
     def description(self) -> str:
         return "Detects deep control nesting in Python files using AST analysis."
 
+    @property
+    def defaults(self) -> Dict[str, Any]:
+        return {
+            "max_depth": 3,
+        }
+
+    def _get_config(self, key: str) -> Any:
+        user_config = load_config()
+        return user_config.get(self.name, {}).get(key, self.defaults.get(key))
+
     def run(self, repo_path: Path) -> List[Dict[str, Any]]:
+        max_depth = self._get_config("max_depth")
+        
         issues = []
         for py_file in repo_path.rglob("*.py"):
             if "venv" in py_file.parts or ".venv" in py_file.parts:
@@ -46,7 +59,7 @@ class AstNestingTool(BaseTool):
                 visitor = NestingDepthVisitor()
                 visitor.visit(tree)
                 
-                if visitor.max_depth > 3:
+                if visitor.max_depth > max_depth:
                     rel_path = py_file.relative_to(repo_path)
                     issues.append({
                         "file": str(rel_path),

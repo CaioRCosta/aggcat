@@ -18,6 +18,79 @@ app = typer.Typer(
 )
 console = Console()
 
+config_app = typer.Typer(
+    name="config",
+    help="Manage tool configuration constants.",
+    add_completion=False,
+)
+app.add_typer(config_app)
+
+
+@config_app.command("show")
+def config_show() -> None:
+    """Show the current configuration for all tools."""
+    from src.config import load_config
+    from src.analyzer import TOOLS
+    user_config = load_config()
+    console.print("[bold cyan]Current Tool Configurations:[/bold cyan]")
+    for tool in TOOLS:
+        if not getattr(tool, "defaults", None):
+            continue
+        console.print(f"\n[bold green]{tool.name}:[/bold green] - {tool.description}")
+        tool_user = user_config.get(tool.name, {})
+        for k, default_val in tool.defaults.items():
+            val = tool_user.get(k, default_val)
+            console.print(f"  {k} = {val} [dim](default: {default_val})[/dim]")
+
+
+@config_app.command("set")
+def config_set(
+    tool: str = typer.Argument(..., help="The tool name."),
+    key: str = typer.Argument(..., help="The config key to set."),
+    value: str = typer.Argument(..., help="The value to set (will be cast dynamically to float/int/str)."),
+) -> None:
+    """Set a configuration constant for a tool."""
+    from src.config import load_config, save_config
+    from src.analyzer import TOOLS
+    
+    # Find the tool in the registry
+    target_tool = next((t for t in TOOLS if t.name == tool), None)
+    if not target_tool or not getattr(target_tool, "defaults", None):
+        console.print(f"[red]Error: Tool '{tool}' is not configurable.[/red]")
+        raise typer.Exit(code=1)
+        
+    if key not in target_tool.defaults:
+        console.print(f"[red]Error: Key '{key}' is not configurable for tool '{tool}'.[/red]")
+        raise typer.Exit(code=1)
+
+    default_val = target_tool.defaults[key]
+    try:
+        if isinstance(default_val, float):
+            typed_val = float(value)
+        elif isinstance(default_val, int):
+            typed_val = int(value)
+        else:
+            typed_val = value
+    except ValueError:
+        console.print(f"[red]Error: Value '{value}' could not be cast to the type of '{key}' ({type(default_val).__name__}).[/red]")
+        raise typer.Exit(code=1)
+
+    user_config = load_config()
+    if tool not in user_config:
+        user_config[tool] = {}
+    user_config[tool][key] = typed_val
+    save_config(user_config)
+    console.print(f"[green]✓ Config updated: {tool}.{key} = {typed_val}[/green]")
+
+
+@config_app.command("reset")
+def config_reset() -> None:
+    """Reset configuration to defaults."""
+    from src.config import reset_config
+    reset_config()
+    console.print("[green]✓ Configuration reset to defaults.[/green]")
+
+
 
 def get_char() -> str:
     if tty is None or termios is None or not sys.stdin.isatty():

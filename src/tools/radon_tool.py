@@ -8,12 +8,9 @@ from rich.text import Text
 
 from src.base_tool import BaseTool
 from src.tools.utils import run_subprocess
+from src.config import load_config
 
 class RadonTool(BaseTool):
-    MI_GRADE_A = 80.0
-    MI_GRADE_B = 60.0
-    MI_GRADE_C = 40.0
-
     @property
     def name(self) -> str:
         return "radon"
@@ -21,6 +18,18 @@ class RadonTool(BaseTool):
     @property
     def description(self) -> str:
         return "Calculates the Maintainability Index (MI) for Python files using Radon."
+
+    @property
+    def defaults(self) -> Dict[str, Any]:
+        return {
+            "mi_grade_a": 80.0,
+            "mi_grade_b": 60.0,
+            "mi_grade_c": 40.0,
+        }
+
+    def _get_config(self, key: str) -> Any:
+        user_config = load_config()
+        return user_config.get(self.name, {}).get(key, self.defaults.get(key))
 
     def run(self, repo_path: Path) -> List[Dict[str, Any]]:
         try:
@@ -48,6 +57,10 @@ class RadonTool(BaseTool):
         if not data:
             return
 
+        mi_grade_a = self._get_config("mi_grade_a")
+        mi_grade_b = self._get_config("mi_grade_b")
+        mi_grade_c = self._get_config("mi_grade_c")
+
         table = Table(
             title="🟢 Maintainability Index",
             box=box.ROUNDED,
@@ -61,11 +74,11 @@ class RadonTool(BaseTool):
         items = data if top_n is None else data[:top_n]
         for item in items:
             mi = item.get("mi", 0.0)
-            if mi >= self.MI_GRADE_A:
+            if mi >= mi_grade_a:
                 grade = Text("A  ✓", style="green")
-            elif mi >= self.MI_GRADE_B:
+            elif mi >= mi_grade_b:
                 grade = Text("B  ~", style="yellow")
-            elif mi >= self.MI_GRADE_C:
+            elif mi >= mi_grade_c:
                 grade = Text("C  !", style="orange3")
             else:
                 grade = Text("D  ✗", style="red")
