@@ -3,7 +3,7 @@
 
 ---
 
-## 👥 Group Members
+## Group Members
 
 - Ari Gonçalves da Silva Filho
 - Caio Rodrigues Costa

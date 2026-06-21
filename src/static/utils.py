@@ -1,8 +1,7 @@
 import subprocess
 
 
-def _run_subprocess(cmd: list[str]) -> str | None:
-    """Função utilitária para executar comandos no terminal de forma segura."""
+def run_subprocess(cmd: list[str]) -> str | None:
     try:
         result = subprocess.run(
             cmd,

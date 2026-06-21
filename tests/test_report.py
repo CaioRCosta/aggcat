@@ -1,15 +1,11 @@
-"""Unit tests for aggcat report module."""
-
-from __future__ import annotations
-
 import json
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 import pytest
 from rich.console import Console
 
-from aggcat.pipeline import AnalysisResult
-from aggcat.report import (
+from src.pipeline import AnalysisResult
+from src.report import (
     DEFAULT_TOP_N,
     _severity_color,
     _top,
@@ -149,7 +145,7 @@ class TestRenderTerminal:
 
 class TestRenderJson:
     def test_prints_valid_json(self, full_result, capsys):
-        with patch("aggcat.report.console") as mock_console:
+        with patch("src.report.console") as mock_console:
             printed = []
             mock_console.print.side_effect = lambda x: printed.append(x)
             mock_console.input.return_value = "n"
@@ -160,7 +156,7 @@ class TestRenderJson:
         assert parsed["repo"] == full_result.repo_path
 
     def test_json_contains_static_and_git(self, full_result):
-        with patch("aggcat.report.console") as mock_console:
+        with patch("src.report.console") as mock_console:
             printed = []
             mock_console.print.side_effect = lambda x: printed.append(x)
             mock_console.input.return_value = "n"
@@ -175,14 +171,14 @@ class TestRenderJson:
 
 class TestRenderHtml:
     def test_renders_without_error(self, full_result):
-        with patch("aggcat.report.console") as mock_console:
+        with patch("src.report.console") as mock_console:
             mock_console.print.return_value = None
             mock_console.input.return_value = "n"
             render_html(full_result, top_n=10)
 
     def test_save_creates_file(self, full_result, tmp_path):
         output_file = tmp_path / "report.html"
-        with patch("aggcat.report.console") as mock_console:
+        with patch("src.report.console") as mock_console:
             mock_console.print.return_value = None
             mock_console.input.side_effect = ["y", str(output_file)]
             render_html(full_result, top_n=10)

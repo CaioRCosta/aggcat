@@ -1,12 +1,6 @@
-"""aggcat — aggregate code analysis tools and metrics in one place."""
-
-from __future__ import annotations
-
 import typer
 from rich.console import Console
-from rich.panel import Panel
-
-from aggcat import pipeline, report
+from src import pipeline, report
 
 app = typer.Typer(
     name="aggcat",
@@ -14,7 +8,6 @@ app = typer.Typer(
     add_completion=False,
 )
 console = Console()
-
 
 @app.command()
 def analyze(
@@ -38,7 +31,6 @@ def analyze(
         help="Show all results instead of top 10.",
     ),
 ) -> None:
-    """Run all analysis tools against a repository and display a unified report."""
     top_n = None if all_results else report.DEFAULT_TOP_N
 
     result = pipeline.run(repo, github_repo=github_repo)
@@ -59,8 +51,7 @@ def analyze(
 
 @app.command()
 def version() -> None:
-    """Show aggcat version."""
-    from importlib.metadata import version as pkg_version  # noqa: PLC0415
+    from importlib.metadata import version as pkg_version
 
     try:
         v = pkg_version("aggcat")
