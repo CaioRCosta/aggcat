@@ -1,12 +1,11 @@
+"""Tests for the reporting functions and formatters."""
+
 import json
 from unittest.mock import patch
 
 import pytest
-from rich.console import Console
 
-from src.pipeline import AnalysisResult
 from src.report import (
-    DEFAULT_TOP_N,
     _severity_color,
     _top,
     _build_html,
@@ -14,45 +13,6 @@ from src.report import (
     render_json,
     render_html,
 )
-
-
-# Fixtures
-
-
-@pytest.fixture
-def empty_result():
-    return AnalysisResult(repo_path="/fake/repo")
-
-
-@pytest.fixture
-def full_result():
-    return AnalysisResult(
-        repo_path="/fake/repo",
-        static={
-            "maintainability": [
-                {"file": "src/a.py", "mi": 85.0},
-                {"file": "src/b.py", "mi": 55.0},
-                {"file": "src/c.py", "mi": 30.0},
-            ],
-            "security": [
-                {"file": "src/a.py", "severity": "HIGH", "issue": "hardcoded password"},
-                {"file": "src/b.py", "severity": "LOW", "issue": "use of assert"},
-            ],
-        },
-        git={
-            "hotspots": [
-                {"file": "src/a.py", "churn": 42, "complexity": 18},
-                {"file": "src/b.py", "churn": 31, "complexity": 14},
-            ],
-            "truck_factor": [
-                {"file": "src/a.py", "authors": 1, "commits": 87},
-                {"file": "src/b.py", "authors": 3, "commits": 20},
-            ],
-        },
-    )
-
-
-# Helper tests
 
 
 class TestSeverityColor:
@@ -89,9 +49,6 @@ class TestTop:
         assert _top([], 5) == []
 
 
-# HTML builder tests
-
-
 class TestBuildHtml:
     def test_returns_string(self, full_result):
         html = _build_html(full_result, top_n=10)
@@ -125,9 +82,6 @@ class TestBuildHtml:
         assert "</html>" in html
 
 
-# render_terminal tests
-
-
 class TestRenderTerminal:
     def test_renders_without_error_empty(self, empty_result):
         """render_terminal should not raise even with no data."""
@@ -140,17 +94,13 @@ class TestRenderTerminal:
         render_terminal(full_result, top_n=None)
 
 
-# render_json tests
-
-
 class TestRenderJson:
-    def test_prints_valid_json(self, full_result, capsys):
+    def test_prints_valid_json(self, full_result):
         with patch("src.report.console") as mock_console:
             printed = []
             mock_console.print.side_effect = lambda x: printed.append(x)
             mock_console.input.return_value = "n"
             render_json(full_result, top_n=10)
-        # At least one call should be the JSON string
         json_output = printed[0]
         parsed = json.loads(json_output)
         assert parsed["repo"] == full_result.repo_path
@@ -164,9 +114,6 @@ class TestRenderJson:
         parsed = json.loads(printed[0])
         assert "static" in parsed
         assert "git" in parsed
-
-
-# render_html tests
 
 
 class TestRenderHtml:

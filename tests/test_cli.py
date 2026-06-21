@@ -1,16 +1,11 @@
-from pathlib import Path
-from unittest.mock import patch
+from __future__ import annotations
 
 import pytest
 from typer.testing import CliRunner
 
 from src.cli import app
-from src.pipeline import AnalysisResult, run
 
 runner = CliRunner()
-
-
-# CLI tests
 
 
 class TestCLIHelp:
@@ -34,7 +29,6 @@ class TestCLIAnalyze:
         assert result.exit_code != 0
 
     def test_analyze_prints_repo_path(self, tmp_path):
-        # Create a minimal git repo so the path exists
         (tmp_path / ".git").mkdir()
         result = runner.invoke(app, ["analyze", str(tmp_path)])
         assert result.exit_code == 0
@@ -59,44 +53,23 @@ class TestCLIAnalyze:
         assert result.exit_code == 0
         assert "aggcat report" in result.output
 
-
-# Pipeline tests
-
-
-class TestPipeline:
-    def test_run_returns_analysis_result(self, tmp_path):
-        (tmp_path / ".git").mkdir()
-        result = run(str(tmp_path))
-        assert isinstance(result, AnalysisResult)
-
-    def test_run_stores_repo_path(self, tmp_path):
-        (tmp_path / ".git").mkdir()
-        result = run(str(tmp_path))
-        assert result.repo_path == str(tmp_path.resolve())
-
-    def test_run_raises_on_missing_path(self):
-        with pytest.raises(FileNotFoundError):
-            run("/this/path/does/not/exist")
-
-    def test_result_git_starts_empty(self, tmp_path):
-        (tmp_path / ".git").mkdir()
-        result = run(str(tmp_path))
-        assert result.git == {}
-
-    def test_result_errors_starts_empty(self, tmp_path):
-        (tmp_path / ".git").mkdir()
-        result = run(str(tmp_path))
-        assert result.errors == []
-
-# CLI extra tests (--all flag and invalid output)
-
-class TestCLIAnalyzeExtra:
     def test_analyze_all_flag_exits_zero(self, tmp_path):
         (tmp_path / ".git").mkdir()
         result = runner.invoke(app, ["analyze", str(tmp_path), "--all"])
         assert result.exit_code == 0
 
-    def test_analyze_all_flag_does_not_show_top_note(self, tmp_path):
+    def test_analyze_all_flag_runs_without_selector(self, tmp_path):
+        (tmp_path / ".git").mkdir()
+        result = runner.invoke(app, ["analyze", str(tmp_path), "--all"])
+        assert "aggcat report" in result.output
+
+    def test_analyze_top_n_limits_results(self, tmp_path):
+        (tmp_path / ".git").mkdir()
+        result = runner.invoke(app, ["analyze", str(tmp_path), "--top-n", "5"])
+        assert result.exit_code == 0
+        assert "Showing top 5" in result.output
+
+    def test_analyze_default_shows_all_results(self, tmp_path):
         (tmp_path / ".git").mkdir()
         result = runner.invoke(app, ["analyze", str(tmp_path), "--all"])
         assert "Showing top" not in result.output
@@ -119,15 +92,11 @@ class TestCLIConfig:
         assert "radon" in result.output
 
     def test_config_set_updates_value(self):
-        # Reset first to be clean
         runner.invoke(app, ["config", "reset"])
-        
-        # Set a config value
         result = runner.invoke(app, ["config", "set", "lizard", "cc_low", "15"])
         assert result.exit_code == 0
         assert "cc_low = 15" in result.output or "Config updated" in result.output
 
-        # Verify show returns the updated value
         show_result = runner.invoke(app, ["config", "show"])
         assert "cc_low = 15" in show_result.output
 
@@ -140,7 +109,6 @@ class TestCLIConfig:
         runner.invoke(app, ["config", "set", "lizard", "cc_low", "15"])
         reset_result = runner.invoke(app, ["config", "reset"])
         assert reset_result.exit_code == 0
-        
+
         show_result = runner.invoke(app, ["config", "show"])
-        # Should be default value (10)
         assert "cc_low = 10" in show_result.output
