@@ -75,10 +75,47 @@ def run_bandit(repo_path: Path) -> list[dict]:
     except (FileNotFoundError, json.JSONDecodeError):
         return []
 
+def run_vulture(repo_path: Path) -> list[dict]:
+    """Executa o Vulture para encontrar código morto"""
+    try:
+        # O Vulture não tem saída nativa em JSON, então faz o parsing do texto puro
+        result = subprocess.run(
+            [
+                "vulture", 
+                str(repo_path), 
+                "--min-confidence", 
+                str(config.VULTURE_MIN_CONFIDENCE),
+                "--exclude", "venv,.venv"
+            ],
+            capture_output=True,
+            text=True,
+            check=False
+        )
+        
+        if not result.stdout.strip():
+            return []
+            
+        dead_code = []
+        # A saída padrão é no formato: "caminho_arquivo.py:linha: mensagem (confiança)"
+        for line in result.stdout.splitlines():
+            if ":" in line:
+                parts = line.split(":", 2)
+                if len(parts) >= 3:
+                    dead_code.append({
+                        "file": parts[0].strip(),
+                        "issue": parts[2].strip()
+                    })
+                    
+        return dead_code
+        
+    except FileNotFoundError:
+        return []
+
 def run(repo_path: str | Path) -> dict:
     path = Path(repo_path).resolve()
     
     return {
         "maintainability": run_radon(path),
         "security": run_bandit(path),
+        "dead_code": run_vulture(path),
     }
