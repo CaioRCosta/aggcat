@@ -1,10 +1,15 @@
 from __future__ import annotations
+from unittest.mock import patch
 
+import pytest
 from typer.testing import CliRunner
 
 from src.cli import app
+from src.pipeline import AnalysisResult
 
 runner = CliRunner()
+
+_FAKE_RESULT = AnalysisResult(repo_path="/fake/repo")
 
 
 class TestCLIHelp:
@@ -23,6 +28,11 @@ class TestCLIHelp:
 
 
 class TestCLIAnalyze:
+    @pytest.fixture(autouse=True)
+    def mock_pipeline(self):
+        with patch("src.cli.pipeline.run", return_value=_FAKE_RESULT):
+            yield
+
     def test_analyze_requires_repo_argument(self):
         result = runner.invoke(app, ["analyze"])
         assert result.exit_code != 0
@@ -31,7 +41,7 @@ class TestCLIAnalyze:
         (tmp_path / ".git").mkdir()
         result = runner.invoke(app, ["analyze", str(tmp_path)])
         assert result.exit_code == 0
-        assert str(tmp_path) in result.output
+        assert _FAKE_RESULT.repo_path in result.output
 
     def test_analyze_default_output_is_terminal(self, tmp_path):
         (tmp_path / ".git").mkdir()
@@ -84,7 +94,14 @@ class TestCLIAnalyze:
         assert "Unknown output format" in result.output
 
 
+@pytest.mark.xdist_group("config")
 class TestCLIConfig:
+    @pytest.fixture(autouse=True)
+    def reset_config(self):
+        runner.invoke(app, ["config", "reset"])
+        yield
+        runner.invoke(app, ["config", "reset"])
+
     def test_config_show_exits_zero(self):
         result = runner.invoke(app, ["config", "show"])
         assert result.exit_code == 0
