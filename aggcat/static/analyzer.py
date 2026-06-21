@@ -142,6 +142,46 @@ def run_flake8(repo_path: Path) -> list[dict]:
         
     except FileNotFoundError:
         return []
+    
+def run_lizard(repo_path: Path) -> list[dict]:
+    """Executa o Lizard para calcular a complexidade ciclomática"""
+    try:
+        # -C define o limite de complexidade
+        # -w faz imprimir apenas os warnings (funções muito complexas)
+        result = subprocess.run(
+            [
+                "lizard", 
+                str(repo_path), 
+                "-C", str(config.CC_LOW), 
+                "-w", 
+                "-x", "*/venv/*", 
+                "-x", "*/.venv/*"
+            ],
+            capture_output=True,
+            text=True,
+            check=False
+        )
+        
+        if not result.stdout.strip():
+            return []
+            
+        complex_files = []
+        # Saída de warning do Lizard: "caminho_arquivo.py:linha: warning: func tem X CCN"
+        for line in result.stdout.splitlines():
+            if " warning: " in line.lower():
+                parts = line.split(":", 2)
+                if len(parts) >= 3:
+                    filepath = parts[0].strip()
+                    issue_msg = parts[2].strip()
+                    complex_files.append({
+                        "file": filepath,
+                        "issue": issue_msg
+                    })
+                    
+        return complex_files
+        
+    except FileNotFoundError:
+        return []
 
 def run(repo_path: str | Path) -> dict:
     path = Path(repo_path).resolve()
@@ -151,4 +191,5 @@ def run(repo_path: str | Path) -> dict:
         "security": run_bandit(path),
         "dead_code": run_vulture(path),
         "style": run_flake8(path),
+        "complexity": run_lizard(path),
     }
