@@ -114,3 +114,37 @@ class TestCLIAnalyzeExtra:
         (tmp_path / ".git").mkdir()
         result = runner.invoke(app, ["analyze", str(tmp_path), "--output", "pdf"])
         assert "Unknown output format" in result.output
+
+
+class TestCLIConfig:
+    def test_config_show_exits_zero(self):
+        result = runner.invoke(app, ["config", "show"])
+        assert result.exit_code == 0
+        assert "radon" in result.output
+
+    def test_config_set_updates_value(self):
+        # Reset first to be clean
+        runner.invoke(app, ["config", "reset"])
+        
+        # Set a config value
+        result = runner.invoke(app, ["config", "set", "lizard", "cc_low", "15"])
+        assert result.exit_code == 0
+        assert "cc_low = 15" in result.output or "Config updated" in result.output
+
+        # Verify show returns the updated value
+        show_result = runner.invoke(app, ["config", "show"])
+        assert "cc_low = 15" in show_result.output
+
+    def test_config_set_invalid_key_fails(self):
+        result = runner.invoke(app, ["config", "set", "lizard", "non_existent_key", "15"])
+        assert result.exit_code != 0
+        assert "not configurable" in result.output
+
+    def test_config_reset_restores_defaults(self):
+        runner.invoke(app, ["config", "set", "lizard", "cc_low", "15"])
+        reset_result = runner.invoke(app, ["config", "reset"])
+        assert reset_result.exit_code == 0
+        
+        show_result = runner.invoke(app, ["config", "show"])
+        # Should be default value (10)
+        assert "cc_low = 10" in show_result.output

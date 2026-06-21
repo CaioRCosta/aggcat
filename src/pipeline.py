@@ -10,15 +10,15 @@ class AnalysisResult:
     errors: list[str] = field(default_factory=list)
 
 
-def run(repo_path: str, github_repo: str | None = None) -> AnalysisResult:
+def run(repo_path: str, github_repo: str | None = None, selected_tools: list = None) -> AnalysisResult:
     path = Path(repo_path).resolve()
     if not path.exists():
         raise FileNotFoundError(f"Repository path not found: {path}")
 
     result = AnalysisResult(repo_path=str(path))
 
-    from src.static import analyzer
-    result.static = analyzer.run(path)
+    from src import analyzer
+    result.static = analyzer.run(path, selected_tools=selected_tools)
 
     # TODO
     # --- Git mining ---

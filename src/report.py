@@ -99,62 +99,7 @@ def _render_truck_factor(truck: list[dict], top_n: int | None) -> None:
     console.print(table)
 
 
-def _render_maintainability(maintainability: list[dict], top_n: int | None) -> None:
-    """Render maintainability index table."""
-    if not maintainability:
-        return
-
-    table = Table(
-        title="🟢 Maintainability Index",
-        box=box.ROUNDED,
-        show_lines=True,
-        title_style="bold green",
-    )
-    table.add_column("File", style="cyan", no_wrap=True)
-    table.add_column("MI Score", justify="right")
-    table.add_column("Grade", justify="center")
-
-    for item in _top(maintainability, top_n):
-        mi = item.get("mi", 0.0)
-        if mi >= 80:
-            grade = Text("A  ✓", style="green")
-        elif mi >= 60:
-            grade = Text("B  ~", style="yellow")
-        elif mi >= 40:
-            grade = Text("C  !", style="orange3")
-        else:
-            grade = Text("D  ✗", style="red")
-        table.add_row(item.get("file", ""), f"{mi:.1f}", grade)
-
-    console.print(table)
-
-
-def _render_security(security: list[dict], top_n: int | None) -> None:
-    """Render security issues table (Bandit + pip-audit)."""
-    if not security:
-        return
-
-    table = Table(
-        title="🔐 Security Issues",
-        box=box.ROUNDED,
-        show_lines=True,
-        title_style="bold magenta",
-    )
-    table.add_column("File / Package", style="cyan", no_wrap=True)
-    table.add_column("Severity", justify="center")
-    table.add_column("Issue", style="dim")
-
-    for item in _top(security, top_n):
-        severity = item.get("severity", "LOW")
-        color = {"HIGH": "red", "MEDIUM": "yellow", "LOW": "green"}.get(severity, "white")
-        table.add_row(
-            item.get("file", ""),
-            Text(severity, style=color),
-            item.get("issue", ""),
-        )
-
-    console.print(table)
-
+# Dynamic Static Tools Terminal/HTML Rendering
 
 def render_terminal(result: AnalysisResult, top_n: int | None = DEFAULT_TOP_N) -> None:
     """Render the full report to the terminal."""
@@ -172,19 +117,24 @@ def render_terminal(result: AnalysisResult, top_n: int | None = DEFAULT_TOP_N) -
 
     hotspots = git.get("hotspots", [])
     truck = git.get("truck_factor", [])
-    maintainability = static.get("maintainability", [])
-    security = static.get("security", [])
 
-    if not any([hotspots, truck, maintainability, security]):
+    from src.analyzer import TOOLS
+
+    # Check if there is any data
+    has_data = any([hotspots, truck]) or any(static.get(tool.name) for tool in TOOLS)
+
+    if not has_data:
         console.print("[dim]No data available yet. Make sure the analysis modules are connected.[/dim]")
     else:
         _render_hotspots(hotspots, top_n)
         console.print()
         _render_truck_factor(truck, top_n)
-        console.print()
-        _render_maintainability(maintainability, top_n)
-        console.print()
-        _render_security(security, top_n)
+        
+        for tool in TOOLS:
+            tool_data = static.get(tool.name, [])
+            if tool_data:
+                console.print()
+                tool.render_terminal(tool_data, console, top_n)
 
     if top_n is not None:
         console.print(
@@ -208,9 +158,11 @@ def render_json(result: AnalysisResult, top_n: int | None = DEFAULT_TOP_N) -> No
         for section in ("hotspots", "truck_factor"):
             if section in data["git"]:
                 data["git"][section] = data["git"][section][:top_n]
-        for section in ("maintainability", "security"):
-            if section in data["static"]:
-                data["static"][section] = data["static"][section][:top_n]
+        
+        from src.analyzer import TOOLS
+        for tool in TOOLS:
+            if tool.name in data["static"]:
+                data["static"][tool.name] = data["static"][tool.name][:top_n]
 
     output = json.dumps(data, indent=2, ensure_ascii=False)
     console.print(output)
@@ -237,12 +189,14 @@ def _build_html(result: AnalysisResult, top_n: int | None) -> str:
     truck_rows = rows(
         git.get("truck_factor", []), ["file", "authors", "commits"]
     )
-    mi_rows = rows(
-        static.get("maintainability", []), ["file", "mi"]
-    )
-    sec_rows = rows(
-        static.get("security", []), ["file", "severity", "issue"]
-    )
+
+    from src.analyzer import TOOLS
+    static_html_parts = []
+    for tool in TOOLS:
+        tool_data = static.get(tool.name, [])
+        static_html_parts.append(tool.render_html_section(tool_data, top_n))
+    
+    static_html = "\n\n".join(static_html_parts)
 
     top_note = (
         f"<p class='note'>Showing top {top_n} results. "
@@ -286,17 +240,7 @@ def _build_html(result: AnalysisResult, top_n: int | None) -> str:
     {truck_rows or '<tr><td colspan="3">No data.</td></tr>'}
   </table>
 
-  <h2>🟢 Maintainability Index</h2>
-  <table>
-    <tr><th>File</th><th>MI Score</th></tr>
-    {mi_rows or '<tr><td colspan="2">No data.</td></tr>'}
-  </table>
-
-  <h2>🔐 Security Issues</h2>
-  <table>
-    <tr><th>File / Package</th><th>Severity</th><th>Issue</th></tr>
-    {sec_rows or '<tr><td colspan="3">No data.</td></tr>'}
-  </table>
+  {static_html}
 
   {top_note}
 </body>
@@ -304,7 +248,6 @@ def _build_html(result: AnalysisResult, top_n: int | None) -> str:
 
 
 def render_html(result: AnalysisResult, top_n: int | None = DEFAULT_TOP_N) -> None:
-    """Print an HTML summary and optionally save to file."""
     html = _build_html(result, top_n)
     console.print("[dim]HTML report generated.[/dim]")
     _ask_save(html, "aggcat-report.html")
