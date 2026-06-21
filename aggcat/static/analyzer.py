@@ -1,11 +1,13 @@
 """Módulo de análise estática"""
 
 from __future__ import annotations
+import ast
 from pathlib import Path
 import json
 import subprocess
 
 from aggcat import config
+from aggcat.static.visitors import NestingDepthVisitor
 
 def run_radon(repo_path: Path) -> list[dict]:
     """Executa o Radon para calcular o índice de manutenibilidade (MI)"""
@@ -182,6 +184,35 @@ def run_lizard(repo_path: Path) -> list[dict]:
         
     except FileNotFoundError:
         return []
+    
+def run_ast_nesting(repo_path: Path) -> list[dict]:
+    """Usa a biblioteca nativa AST para encontrar aninhamentos excessivos no código"""
+    issues = []
+    
+    # Percorre todos os arquivos .py dentro do diretório do repositório
+    for py_file in repo_path.rglob("*.py"):
+        # Ignora pastas de ambiente virtual
+        if "venv" in py_file.parts or ".venv" in py_file.parts:
+            continue
+
+        try:
+            content = py_file.read_text(encoding="utf-8")
+            tree = ast.parse(content)
+            
+            visitor = NestingDepthVisitor()
+            visitor.visit(tree)
+            
+            # Se tiver mais de 3 níveis de indentação de controle, consideramos ruim
+            if visitor.max_depth > 3:
+                rel_path = py_file.relative_to(repo_path)
+                issues.append({
+                    "file": str(rel_path),
+                    "issue": f"Alto nivel de aninhamento detectado (profundidade: {visitor.max_depth})"
+                })
+        except (SyntaxError, UnicodeDecodeError):
+            continue
+            
+    return issues
 
 def run(repo_path: str | Path) -> dict:
     path = Path(repo_path).resolve()
@@ -192,4 +223,5 @@ def run(repo_path: str | Path) -> dict:
         "dead_code": run_vulture(path),
         "style": run_flake8(path),
         "complexity": run_lizard(path),
+        "nesting": run_ast_nesting(path),
     }
