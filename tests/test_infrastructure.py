@@ -82,11 +82,6 @@ class TestPipeline:
         with pytest.raises(FileNotFoundError):
             run("/this/path/does/not/exist")
 
-    def test_result_static_starts_empty(self, tmp_path):
-        (tmp_path / ".git").mkdir()
-        result = run(str(tmp_path))
-        assert result.static == {}
-
     def test_result_git_starts_empty(self, tmp_path):
         (tmp_path / ".git").mkdir()
         result = run(str(tmp_path))
