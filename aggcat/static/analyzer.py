@@ -83,7 +83,7 @@ def run_vulture(repo_path: Path) -> list[dict]:
         # A saída padrão é no formato: "caminho_arquivo.py:linha: mensagem (confiança)"
         for line in stdout.splitlines():
             if ":" in line:
-                parts = line.split(":", 2)
+                parts = line.rsplit(":", 2)
                 if len(parts) >= 3:
                     dead_code.append({
                         "file": parts[0].strip(),
@@ -107,7 +107,7 @@ def run_flake8(repo_path: Path) -> list[dict]:
         # Saída padrão do Flake8: "caminho_arquivo.py:linha:coluna: CODIGO Mensagem"
         for line in stdout.splitlines():
             # Divide a string em no máximo 4 partes: arquivo, linha, coluna, erro
-            parts = line.split(":", 3)
+            parts = line.rsplit(":", 3)
             if len(parts) == 4:
                 filepath = parts[0].strip()
                 error_details = parts[3].strip()
@@ -141,7 +141,7 @@ def run_lizard(repo_path: Path) -> list[dict]:
         # Saída de warning do Lizard: "caminho_arquivo.py:linha: warning: func tem X CCN"
         for line in stdout.splitlines():
             if " warning: " in line.lower():
-                parts = line.split(":", 2)
+                parts = line.rsplit(":", 2)
                 if len(parts) >= 3:
                     filepath = parts[0].strip()
                     issue_msg = parts[2].strip()
