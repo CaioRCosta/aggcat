@@ -102,7 +102,7 @@ aggcat --help
 ### `aggcat analyze`
 
 ```
-aggcat analyze [OPTIONS] REPO
+aggcat analyze REPO [OPTIONS]
 ```
 
 | Option | Short | Default | Description |
