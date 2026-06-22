@@ -18,6 +18,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+          fetch-depth: 0
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
@@ -39,3 +42,13 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./coverage.xml
           fail_ci_if_error: false
+
+      - name: Update test count badge in README
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: |
+          COUNT=$(pytest tests/ --tb=no -q 2>/dev/null | grep -oP '^\d+(?= passed)')
+          sed -i "s|tests-[0-9]*%20passing|tests-${COUNT}%20passing|g" README.md
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git diff --quiet README.md || git commit -am "ci: update test count badge [skip ci]"
+          git push

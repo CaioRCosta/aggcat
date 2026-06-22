@@ -24,26 +24,28 @@ class BanditTool(BaseTool):
 
     def run(self, repo_path: Path) -> List[Dict[str, Any]]:
         try:
+            repo = Path(repo_path).resolve()
+            skip_dirs = ["tests", "venv", ".venv", "__pycache__", ".git"]
             exclude = ",".join(
-                str(p) for name in ("venv", ".venv", "__pycache__", ".git")
-                if (p := (Path(repo_path) / name)).exists()
+                str(repo / name) for name in skip_dirs
+                if (repo / name).exists()
             )
-            cmd = ["bandit", "-r", str(repo_path), "-f", "json"]
+            cmd = ["bandit", "-r", str(repo), "-f", "json"]
             if exclude:
-                cmd += ["-x", exclude]
+                cmd += ["--exclude", exclude]
             stdout = run_subprocess(cmd)
             if not stdout:
                 return []
-                
+
             data = json.loads(stdout)
             security_issues = []
-            
+
             for issue in data.get("results", []):
                 severity = issue.get("issue_severity", self.SEVERITY_LOW)
                 security_issues.append({
                     "file": issue.get("filename", ""),
                     "severity": severity,
-                    "issue": issue.get("issue_text", "")
+                    "issue_text": issue.get("issue_text", ""),
                 })
                 
             severity_order = {
@@ -79,7 +81,7 @@ class BanditTool(BaseTool):
             table.add_row(
                 item.get("file", ""),
                 Text(severity, style=color),
-                item.get("issue", ""),
+                item.get("issue_text", ""),
             )
 
         console.print(table)
@@ -91,7 +93,7 @@ class BanditTool(BaseTool):
         items = data if top_n is None else data[:top_n]
         rows = []
         for item in items:
-            rows.append(f"<tr><td>{item.get('file', '')}</td><td>{item.get('severity', '')}</td><td>{item.get('issue', '')}</td></tr>")
+            rows.append(f"<tr><td>{item.get('file', '')}</td><td>{item.get('severity', '')}</td><td>{item.get('issue_text', '')}</td></tr>")
         rows_str = "\n    ".join(rows)
 
         return f"""  <h2>🔐 Security Issues</h2>
