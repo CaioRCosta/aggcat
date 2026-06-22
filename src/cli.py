@@ -3,6 +3,7 @@ from importlib.metadata import version as pkg_version
 from io import StringIO
 import typer
 from rich.console import Console
+from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn
 
 from src import pipeline, report
 from src.config import load_config, save_config, reset_config
@@ -206,7 +207,23 @@ def analyze(
 ) -> None:
     selected = SELECTABLE if all_tools else select_tools_interactive()
 
-    result = pipeline.run(repo, selected=selected)
+    total = len(selected)
+
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[bold cyan]{task.description}"),
+        BarColumn(),
+        TaskProgressColumn(),
+        TextColumn("[dim]{task.fields[tool]}"),
+        console=console,
+        transient=True,
+    ) as progress:
+        task = progress.add_task("Analyzing...", total=total, tool="")
+
+        def on_progress(tool_name: str) -> None:
+            progress.update(task, advance=1, tool=tool_name)
+
+        result = pipeline.run(repo, selected=selected, on_progress=on_progress)
 
     if output == "terminal":
         report.render_terminal(result, top_n=top_n)

@@ -33,7 +33,7 @@ def _detect_github_slug(repo_path: Path) -> str | None:
     return m.group(1) if m else None
 
 
-def run(repo_path: str, selected: list = None) -> AnalysisResult:
+def run(repo_path: str, selected: list = None, on_progress=None) -> AnalysisResult:
     path = Path(repo_path).resolve()
     if not path.exists():
         raise FileNotFoundError(f"Repository path not found: {path}")
@@ -52,10 +52,12 @@ def run(repo_path: str, selected: list = None) -> AnalysisResult:
     selected_names = {t.name for t in base_selected}
     dep_tools = [t for c in composite_selected for t in c.depends_on if t.name not in selected_names]
 
-    result.static = analyzer.run(path, selected_tools=base_selected + dep_tools)
+    result.static = analyzer.run(path, selected_tools=base_selected + dep_tools, on_progress=on_progress)
 
     for composite in composite_selected:
         if all(t.name in result.static for t in composite.depends_on):
+            if on_progress:
+                on_progress(composite.name)
             result.composite[composite.name] = composite.run(result.static)
 
     result.selected_renderables = selected

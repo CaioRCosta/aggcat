@@ -54,7 +54,7 @@ def _has_github_token() -> bool:
     return bool(os.environ.get("GITHUB_TOKEN", "").strip())
 
 
-def run(repo_path: str | Path, selected_tools: list = None) -> dict:
+def run(repo_path: str | Path, selected_tools: list = None, on_progress=None) -> dict:
     path = Path(repo_path).resolve()
     has_token = _has_github_token()
     tools_to_run = selected_tools if selected_tools is not None else ALL_BASE_TOOLS
@@ -62,5 +62,7 @@ def run(repo_path: str | Path, selected_tools: list = None) -> dict:
     for tool in tools_to_run:
         if tool.requires_github and not has_token:
             continue
+        if on_progress:
+            on_progress(tool.name)
         results[tool.name] = tool.run(path)
     return results
