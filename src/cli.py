@@ -1,11 +1,13 @@
 import sys
 from importlib.metadata import version as pkg_version
+from io import StringIO
 import typer
 from rich.console import Console
 
 from src import pipeline, report
 from src.config import load_config, save_config, reset_config
-from src.analyzer import TOOLS, SELECTABLE, ALL_BASE_TOOLS, _has_github_token
+from src.analyzer import TOOLS, SELECTABLE, ALL_BASE_TOOLS, COMPOSITE_REPORTS, _has_github_token
+from src.base_composite import CompositeReport
 
 try:
     import tty
@@ -117,31 +119,28 @@ def select_tools_interactive() -> list:
 
     console.print("[bold cyan]Select tools to run (Arrow Keys to navigate, Space to toggle, Enter to confirm):[/bold cyan]\n")
 
+    buf_console = Console(file=StringIO(), highlight=False)
+
     def render_menu():
+        buf = StringIO()
+        c = Console(file=buf, highlight=False, force_terminal=True)
         for i, tool in enumerate(SELECTABLE):
+            desc = tool.full_description if isinstance(tool, CompositeReport) else tool.description
             if unavailable[i]:
                 cursor = "  "
                 chk = "[dim]–[/dim]"
                 name_style = "dim"
-                suffix = f"[dim]{tool.description} [red](requires GITHUB_TOKEN)[/red][/dim]"
+                suffix = f"[dim]{desc} [red](requires GITHUB_TOKEN)[/red][/dim]"
             else:
-                if selected[i]:
-                    chk = "[bold green]✔[/bold green]"
-                    desc_style = "white"
-                else:
-                    chk = "[dim]✗[/dim]"
-                    desc_style = "dim"
-
-                if i == current_idx:
-                    cursor = "[bold cyan]> [/bold cyan]"
-                    name_style = "bold cyan"
-                else:
-                    cursor = "  "
-                    name_style = "bold white" if selected[i] else "dim"
-
-                suffix = f"[style={desc_style}]{tool.description}[/style]"
-
-            console.print(f"{cursor}[{chk}] [{name_style}]{tool.name:<15}[/{name_style}] - {suffix}")
+                chk = "[bold green]✔[/bold green]" if selected[i] else "[dim]✗[/dim]"
+                desc_style = "white" if selected[i] else "dim"
+                cursor = "[bold cyan]> [/bold cyan]" if i == current_idx else "  "
+                name_style = ("bold cyan" if i == current_idx
+                              else "bold white" if selected[i] else "dim")
+                suffix = f"[style={desc_style}]{desc}[/style]"
+            c.print(f"{cursor}[{chk}] [{name_style}]{tool.name:<15}[/{name_style}] - {suffix}")
+        sys.stdout.write(buf.getvalue())
+        sys.stdout.flush()
 
     try:
         sys.stdout.write("\033[?25l")
@@ -151,8 +150,8 @@ def select_tools_interactive() -> list:
             render_menu()
             ch = get_char()
 
-            for _ in range(len(SELECTABLE)):
-                sys.stdout.write("\033[F\033[K")
+            # move cursor up and clear all menu lines in one write
+            sys.stdout.write(("\033[F\033[K") * len(SELECTABLE))
             sys.stdout.flush()
 
             if ch == '\x1b[A':  # Up

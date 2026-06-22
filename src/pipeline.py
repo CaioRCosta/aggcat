@@ -5,7 +5,7 @@ from pathlib import Path
 
 from src.base_composite import CompositeReport
 from src.base_tool import BaseTool
-from src.analyzer import ALL_BASE_TOOLS, SELECTABLE, _has_github_token
+from src.analyzer import ALL_BASE_TOOLS, SELECTABLE, COMPOSITE_REPORTS, _has_github_token
 from src import analyzer
 
 

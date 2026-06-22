@@ -27,6 +27,11 @@ class CompositeReport(ABC):
     def requires_github(self) -> bool:
         return any(t.requires_github for t in self.depends_on)
 
+    @property
+    def full_description(self) -> str:
+        deps = ", ".join(t.name for t in self.depends_on)
+        return f"{self.description} [uses: {deps}]"
+
     @abstractmethod
     def run(self, static: Dict[str, Any]) -> List[Dict[str, Any]]:
         pass

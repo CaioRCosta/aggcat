@@ -6,8 +6,19 @@ from src.tools.vulture_tool import VultureTool
 from src.tools.flake8_tool import Flake8Tool
 from src.tools.lizard_tool import LizardTool
 from src.tools.ast_nesting_tool import AstNestingTool
+from src.tools.cloc_tool import ClocTool
+from src.tools.pip_audit_tool import PipAuditTool
+from src.tools.treesitter_tool import TreesitterTool
+from src.tools.coverage_tool import CoverageTool
+from src.tools.pydriller_tool import PyDrillerTool
+from src.tools.gitpython_tool import GitPythonTool
+from src.tools.coupling_tool import CouplingTool
+from src.tools.github_tool import GithubTool
+from src.composites.hotspots import HotspotsReport
+from src.composites.uncovered_complex import UncoveredComplexReport
+from src.composites.bandit_risk import BanditRiskReport
+from src.composites.truck_factor import TruckFactorReport
 
-# All BaseTool instances — includes non-renderable data-only tools added in future phases
 ALL_BASE_TOOLS = [
     RadonTool(),
     BanditTool(),
@@ -15,10 +26,22 @@ ALL_BASE_TOOLS = [
     Flake8Tool(),
     LizardTool(),
     AstNestingTool(),
+    ClocTool(),
+    PipAuditTool(),
+    TreesitterTool(),
+    CoverageTool(),
+    PyDrillerTool(),
+    GitPythonTool(),
+    CouplingTool(),
+    GithubTool(),
 ]
 
-# Composite reports — populated as Phase 4 tools are implemented
-COMPOSITE_REPORTS = []
+COMPOSITE_REPORTS = [
+    HotspotsReport(),
+    TruckFactorReport(),
+    UncoveredComplexReport(),
+    BanditRiskReport(),
+]
 
 # What appears in the interactive selector: renderable base tools + all composites
 SELECTABLE = [t for t in ALL_BASE_TOOLS if t.renderable] + COMPOSITE_REPORTS

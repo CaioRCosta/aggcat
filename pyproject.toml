@@ -25,6 +25,9 @@ dependencies = [
   "flake8>=7.0",
   "bandit>=1.7",
   "tree-sitter>=0.23",
+  "tree-sitter-python>=0.23",
+  "pip-audit>=2.7",
+  "vulture>=2.11",
 ]
 
 [project.optional-dependencies]

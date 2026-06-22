@@ -192,11 +192,18 @@ class TestGetChar:
             assert cli_module.get_char() == "\x1b[A"
 
 
+def _available_tools():
+    """SELECTABLE items that are available without a GITHUB_TOKEN."""
+    return [t for t in TOOLS if not t.requires_github or _has_github_token()]
+
+
 class TestSelectToolsInteractive:
     @pytest.fixture(autouse=True)
     def tty_active(self):
+        env = {k: v for k, v in __import__("os").environ.items() if k != "GITHUB_TOKEN"}
         with patch("sys.stdin") as mock_stdin, \
-             patch("sys.stdout"):
+             patch("sys.stdout"), \
+             patch.dict("os.environ", env, clear=True):
             mock_stdin.isatty.return_value = True
             self.mock_stdin = mock_stdin
             yield
@@ -207,24 +214,31 @@ class TestSelectToolsInteractive:
 
     def test_enter_returns_all_tools(self):
         result = self._run(["\r"])
-        assert result == TOOLS
+        assert result == _available_tools()
 
     def test_space_deselects_first_tool(self):
+        available = _available_tools()
         result = self._run([" ", "\r"])
-        assert TOOLS[0] not in result
-        assert len(result) == len(TOOLS) - 1
+        assert available[0] not in result
+        assert len(result) == len(available) - 1
 
     def test_down_then_enter_returns_all(self):
         result = self._run(["\x1b[B", "\r"])
-        assert result == TOOLS
+        assert result == _available_tools()
 
     def test_up_wraps_to_last_tool(self):
+        available = _available_tools()
         result = self._run(["\x1b[A", " ", "\r"])
-        assert TOOLS[-1] not in result
+        assert available[-1] not in result
 
     def test_deselect_all_raises_exit(self):
-        # Space deselects current, Down moves to next — repeat for all tools
-        keys = ([" ", "\x1b[B"] * len(TOOLS))[:-1] + ["\r"]
+        # Build a sequence that navigates every slot and deselects available ones
+        keys = []
+        for t in TOOLS:
+            if not t.requires_github:
+                keys.append(" ")   # deselect
+            keys.append("\x1b[B")  # move down to next
+        keys.append("\r")          # confirm
         with pytest.raises(typer.Exit):
             self._run(keys)
 
@@ -338,4 +352,5 @@ class TestSelectToolsUnavailable:
             mock_stdin.isatty.return_value = False
             result = cli_module.select_tools_interactive()
         assert github_tool not in result
-        assert len(result) == len(TOOLS)
+        # all real github-gated items are also filtered out
+        assert all(not t.requires_github for t in result)
