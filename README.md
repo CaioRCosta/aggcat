@@ -108,7 +108,6 @@ aggcat analyze [OPTIONS] REPO
 | Option | Short | Default | Description |
 |:---|:---|:---|:---|
 | `--output` | `-o` | `terminal` | Output format: `terminal` \| `json` \| `html` |
-| `--github-repo` | `-g` | — | GitHub repository (`owner/repo`) for API metrics |
 | `--top-n` | `-n` | all | Limit results to top N items per section |
 | `--all` | `-a` | `false` | Run all tools, skipping the interactive selector |
 
@@ -135,9 +134,10 @@ aggcat analyze /path/to/repo --top-n 10
 # Skip selector, limit to top 5, output HTML
 aggcat analyze /path/to/repo --all --top-n 5 --output html
 
-# Include GitHub API metrics (requires GITHUB_TOKEN)
+# GitHub API metrics are fetched automatically when GITHUB_TOKEN is set
+# and the repository has a GitHub remote origin configured
 export GITHUB_TOKEN=your_token_here
-aggcat analyze /path/to/repo --github-repo owner/repo-name
+aggcat analyze /path/to/repo
 ```
 
 ---

@@ -110,35 +110,44 @@ def get_char() -> str:
 
 
 def select_tools_interactive() -> list:
-    from src.analyzer import TOOLS
+    from src.analyzer import TOOLS, _has_github_token
     if not sys.stdin.isatty():
-        return TOOLS
+        return [t for t in TOOLS if not t.requires_github or _has_github_token()]
 
-    selected = [True] * len(TOOLS)
+    has_token = _has_github_token()
+    unavailable = [t.requires_github and not has_token for t in TOOLS]
+    selected = [not u for u in unavailable]
     current_idx = 0
 
     console.print("[bold cyan]Select tools to run (Arrow Keys to navigate, Space to toggle, Enter to confirm):[/bold cyan]\n")
 
     def render_menu():
         for i, tool in enumerate(TOOLS):
-            if selected[i]:
-                chk = "[bold green]✔[/bold green]"
-                desc_style = "white"
-            else:
-                chk = "[dim]✗[/dim]"
-                desc_style = "dim"
-
-            if i == current_idx:
-                cursor = "[bold cyan]> [/bold cyan]"
-                name_style = "bold cyan"
-            else:
+            if unavailable[i]:
                 cursor = "  "
-                name_style = "bold white" if selected[i] else "dim"
+                chk = "[dim]–[/dim]"
+                name_style = "dim"
+                suffix = f"[dim]{tool.description} [red](requires GITHUB_TOKEN)[/red][/dim]"
+            else:
+                if selected[i]:
+                    chk = "[bold green]✔[/bold green]"
+                    desc_style = "white"
+                else:
+                    chk = "[dim]✗[/dim]"
+                    desc_style = "dim"
 
-            console.print(f"{cursor}[{chk}] [{name_style}]{tool.name:<15}[/{name_style}] - [style={desc_style}]{tool.description}[/style]")
+                if i == current_idx:
+                    cursor = "[bold cyan]> [/bold cyan]"
+                    name_style = "bold cyan"
+                else:
+                    cursor = "  "
+                    name_style = "bold white" if selected[i] else "dim"
+
+                suffix = f"[style={desc_style}]{tool.description}[/style]"
+
+            console.print(f"{cursor}[{chk}] [{name_style}]{tool.name:<15}[/{name_style}] - {suffix}")
 
     try:
-        # Hide cursor
         sys.stdout.write("\033[?25l")
         sys.stdout.flush()
 
@@ -146,20 +155,20 @@ def select_tools_interactive() -> list:
             render_menu()
             ch = get_char()
 
-            # Clear menu lines
             for _ in range(len(TOOLS)):
                 sys.stdout.write("\033[F\033[K")
             sys.stdout.flush()
 
-            if ch == '\x1b[A': # Up
+            if ch == '\x1b[A':  # Up
                 current_idx = (current_idx - 1) % len(TOOLS)
-            elif ch == '\x1b[B': # Down
+            elif ch == '\x1b[B':  # Down
                 current_idx = (current_idx + 1) % len(TOOLS)
-            elif ch == ' ': # Space
-                selected[current_idx] = not selected[current_idx]
-            elif ch in ('\r', '\n'): # Enter
+            elif ch == ' ':  # Space — ignore unavailable tools
+                if not unavailable[current_idx]:
+                    selected[current_idx] = not selected[current_idx]
+            elif ch in ('\r', '\n'):  # Enter
                 break
-            elif ch == '\x03': # Ctrl+C
+            elif ch == '\x03':  # Ctrl+C
                 raise KeyboardInterrupt()
     except KeyboardInterrupt:
         sys.stdout.write("\033[?25h")
@@ -167,7 +176,6 @@ def select_tools_interactive() -> list:
         console.print("[red]Aborted.[/red]")
         sys.exit(1)
     finally:
-        # Show cursor
         sys.stdout.write("\033[?25h")
         sys.stdout.flush()
 
@@ -188,12 +196,6 @@ def analyze(
         "-o",
         help="Output format: terminal | json | html",
     ),
-    github_repo: str = typer.Option(
-        None,
-        "--github-repo",
-        "-g",
-        help="GitHub repository in 'owner/repo' format for API metrics.",
-    ),
     top_n: int = typer.Option(
         None,
         "--top-n",
@@ -210,7 +212,7 @@ def analyze(
     from src.analyzer import TOOLS
     selected_tools = TOOLS if all_tools else select_tools_interactive()
 
-    result = pipeline.run(repo, github_repo=github_repo, selected_tools=selected_tools)
+    result = pipeline.run(repo, selected_tools=selected_tools)
 
     if output == "terminal":
         report.render_terminal(result, top_n=top_n)

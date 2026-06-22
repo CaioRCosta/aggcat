@@ -18,8 +18,11 @@ class BaseTool(ABC):
 
     @property
     def defaults(self) -> Dict[str, Any]:
-        """Default configuration parameters for the tool."""
         return {}
+
+    @property
+    def requires_github(self) -> bool:
+        return False
 
     @abstractmethod
     def run(self, repo_path: Path) -> List[Dict[str, Any]]:
