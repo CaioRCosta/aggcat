@@ -63,7 +63,7 @@ class AstNestingTool(BaseTool):
                     rel_path = py_file.relative_to(repo_path)
                     issues.append({
                         "file": str(rel_path),
-                        "issue": f"Alto nivel de aninhamento detectado (profundidade: {visitor.max_depth})"
+                        "issue": f"Deep nesting detected (depth: {visitor.max_depth})"
                     })
             except Exception:
                 continue

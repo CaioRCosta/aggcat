@@ -24,7 +24,14 @@ class BanditTool(BaseTool):
 
     def run(self, repo_path: Path) -> List[Dict[str, Any]]:
         try:
-            stdout = run_subprocess(["bandit", "-r", str(repo_path), "-x", "venv,.venv", "-f", "json"])
+            exclude = ",".join(
+                str(p) for name in ("venv", ".venv", "__pycache__", ".git")
+                if (p := (Path(repo_path) / name)).exists()
+            )
+            cmd = ["bandit", "-r", str(repo_path), "-f", "json"]
+            if exclude:
+                cmd += ["-x", exclude]
+            stdout = run_subprocess(cmd)
             if not stdout:
                 return []
                 
