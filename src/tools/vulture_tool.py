@@ -6,7 +6,6 @@ from rich import box
 
 from src.base_tool import BaseTool
 from src.tools.utils import run_subprocess
-from src.config import load_config
 
 class VultureTool(BaseTool):
     @property
@@ -22,10 +21,6 @@ class VultureTool(BaseTool):
         return {
             "min_confidence": 80,
         }
-
-    def _get_config(self, key: str) -> Any:
-        user_config = load_config()
-        return user_config.get(self.name, {}).get(key, self.defaults.get(key))
 
     def run(self, repo_path: Path) -> List[Dict[str, Any]]:
         min_confidence = self._get_config("min_confidence")

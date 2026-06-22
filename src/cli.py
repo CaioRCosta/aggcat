@@ -10,6 +10,8 @@ from src.config import load_config, save_config, reset_config
 from src.analyzer import TOOLS, SELECTABLE, ALL_BASE_TOOLS, COMPOSITE_REPORTS, _has_github_token
 from src.base_composite import CompositeReport
 
+_ALL_CONFIGURABLE = list(TOOLS) + list(COMPOSITE_REPORTS)
+
 try:
     import tty
     import termios
@@ -37,8 +39,8 @@ def config_show() -> None:
     """Show the current configuration for all tools."""
     user_config = load_config()
     console.print("[bold cyan]Current Tool Configurations:[/bold cyan]")
-    for tool in TOOLS:
-        if not getattr(tool, "defaults", None):
+    for tool in _ALL_CONFIGURABLE:
+        if not tool.defaults:
             continue
         console.print(f"\n[bold green]{tool.name}:[/bold green] - {tool.description}")
         tool_user = user_config.get(tool.name, {})
@@ -49,22 +51,21 @@ def config_show() -> None:
 
 @config_app.command("set")
 def config_set(
-    tool: str = typer.Argument(..., help="The tool name."),
+    name: str = typer.Argument(..., help="Tool or composite report name."),
     key: str = typer.Argument(..., help="The config key to set."),
-    value: str = typer.Argument(..., help="The value to set (will be cast dynamically to float/int/str)."),
+    value: str = typer.Argument(..., help="The value to set (cast to float/int/str automatically)."),
 ) -> None:
-    """Set a configuration constant for a tool."""
-    # Find the tool in the registry
-    target_tool = next((t for t in TOOLS if t.name == tool), None)
-    if not target_tool or not getattr(target_tool, "defaults", None):
-        console.print(f"[red]Error: Tool '{tool}' is not configurable.[/red]")
-        raise typer.Exit(code=1)
-        
-    if key not in target_tool.defaults:
-        console.print(f"[red]Error: Key '{key}' is not configurable for tool '{tool}'.[/red]")
+    """Set a configuration constant for a tool or composite report."""
+    target = next((t for t in _ALL_CONFIGURABLE if t.name == name), None)
+    if not target or not target.defaults:
+        console.print(f"[red]Error: '{name}' is not configurable.[/red]")
         raise typer.Exit(code=1)
 
-    default_val = target_tool.defaults[key]
+    if key not in target.defaults:
+        console.print(f"[red]Error: Key '{key}' is not configurable for '{name}'.[/red]")
+        raise typer.Exit(code=1)
+
+    default_val = target.defaults[key]
     try:
         if isinstance(default_val, float):
             typed_val = float(value)
@@ -73,15 +74,15 @@ def config_set(
         else:
             typed_val = value
     except ValueError:
-        console.print(f"[red]Error: Value '{value}' could not be cast to the type of '{key}' ({type(default_val).__name__}).[/red]")
+        console.print(f"[red]Error: Value '{value}' could not be cast to {type(default_val).__name__}.[/red]")
         raise typer.Exit(code=1)
 
     user_config = load_config()
-    if tool not in user_config:
-        user_config[tool] = {}
-    user_config[tool][key] = typed_val
+    if name not in user_config:
+        user_config[name] = {}
+    user_config[name][key] = typed_val
     save_config(user_config)
-    console.print(f"[green]✓ Config updated: {tool}.{key} = {typed_val}[/green]")
+    console.print(f"[green]✓ Config updated: {name}.{key} = {typed_val}[/green]")
 
 
 @config_app.command("reset")
@@ -120,12 +121,20 @@ def select_tools_interactive() -> list:
 
     console.print("[bold cyan]Select tools to run (Arrow Keys to navigate, Space to toggle, Enter to confirm):[/bold cyan]\n")
 
-    buf_console = Console(file=StringIO(), highlight=False)
+    first_composite_idx = next((i for i, t in enumerate(SELECTABLE) if isinstance(t, CompositeReport)), None)
+    rendered_lines = [0]
 
     def render_menu():
         buf = StringIO()
         c = Console(file=buf, highlight=False, force_terminal=True)
+        lines = 0
         for i, tool in enumerate(SELECTABLE):
+            if i == 0:
+                c.print("[bold dim]── Tools ──────────────────────────────────────[/bold dim]")
+                lines += 1
+            elif i == first_composite_idx:
+                c.print("[bold dim]── Composite Reports ──────────────────────────[/bold dim]")
+                lines += 1
             desc = tool.full_description if isinstance(tool, CompositeReport) else tool.description
             if unavailable[i]:
                 cursor = "  "
@@ -140,6 +149,8 @@ def select_tools_interactive() -> list:
                               else "bold white" if selected[i] else "dim")
                 suffix = f"[style={desc_style}]{desc}[/style]"
             c.print(f"{cursor}[{chk}] [{name_style}]{tool.name:<15}[/{name_style}] - {suffix}")
+            lines += 1
+        rendered_lines[0] = lines
         sys.stdout.write(buf.getvalue())
         sys.stdout.flush()
 
@@ -151,8 +162,7 @@ def select_tools_interactive() -> list:
             render_menu()
             ch = get_char()
 
-            # move cursor up and clear all menu lines in one write
-            sys.stdout.write(("\033[F\033[K") * len(SELECTABLE))
+            sys.stdout.write(("\033[F\033[K") * rendered_lines[0])
             sys.stdout.flush()
 
             if ch == '\x1b[A':  # Up

@@ -34,10 +34,15 @@ class BanditRiskReport(CompositeReport):
         return "Security issues annotated with file complexity — harder-to-fix flaws first."
 
     @property
+    def defaults(self) -> Dict[str, Any]:
+        return {"min_cc": 1}
+
+    @property
     def depends_on(self) -> List:
         return [_BANDIT, _LIZARD]
 
     def run(self, static: Dict[str, Any]) -> List[Dict[str, Any]]:
+        min_cc = self._get_config("min_cc")
         cc: Dict[str, int] = {}
         for r in static.get("lizard", []):
             filepath = r["file"].split(":")[0].lstrip("./")
@@ -49,7 +54,7 @@ class BanditRiskReport(CompositeReport):
             if "/tests/" in filepath or filepath.startswith("tests/"):
                 continue
             cc_val = cc.get(filepath, 0)
-            if cc_val == 0:
+            if cc_val < min_cc:
                 continue
             results.append({**finding, "cc": cc_val})
 

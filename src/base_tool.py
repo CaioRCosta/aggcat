@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any, Dict, List
 from rich.console import Console
+from src.config import load_config
 
 class BaseTool(ABC):
     @property
@@ -17,6 +18,9 @@ class BaseTool(ABC):
     @property
     def defaults(self) -> Dict[str, Any]:
         return {}
+
+    def _get_config(self, key: str) -> Any:
+        return load_config().get(self.name, {}).get(key, self.defaults.get(key))
 
     @property
     def requires_github(self) -> bool:

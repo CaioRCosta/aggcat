@@ -6,7 +6,6 @@ from rich import box
 
 from src.base_tool import BaseTool
 from src.tools.utils import run_subprocess
-from src.config import load_config
 
 class LizardTool(BaseTool):
     @property
@@ -22,10 +21,6 @@ class LizardTool(BaseTool):
         return {
             "cc_low": 10,
         }
-
-    def _get_config(self, key: str) -> Any:
-        user_config = load_config()
-        return user_config.get(self.name, {}).get(key, self.defaults.get(key))
 
     def run(self, repo_path: Path) -> List[Dict[str, Any]]:
         cc_low = self._get_config("cc_low")

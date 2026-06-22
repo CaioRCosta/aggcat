@@ -12,10 +12,6 @@ from src.tools.lizard_tool import LizardTool
 _COVERAGE = CoverageTool()
 _LIZARD = LizardTool()
 
-_COVERAGE_THRESHOLD = 60.0
-_CC_THRESHOLD = 10
-
-
 def _extract_cc(issue_str: str) -> int:
     for part in issue_str.split(","):
         part = part.strip()
@@ -37,10 +33,16 @@ class UncoveredComplexReport(CompositeReport):
         return "Complex files with low test coverage — highest risk to change."
 
     @property
+    def defaults(self) -> Dict[str, Any]:
+        return {"max_coverage": 60.0, "min_cc": 10}
+
+    @property
     def depends_on(self) -> List:
         return [_COVERAGE, _LIZARD]
 
     def run(self, static: Dict[str, Any]) -> List[Dict[str, Any]]:
+        max_coverage = self._get_config("max_coverage")
+        min_cc = self._get_config("min_cc")
         coverage = {r["file"].lstrip("./"): r["coverage_pct"] for r in static.get("coverage", [])}
 
         cc: Dict[str, int] = {}
@@ -53,7 +55,7 @@ class UncoveredComplexReport(CompositeReport):
             cov = coverage.get(filepath)
             if cov is None:
                 continue
-            if cov < _COVERAGE_THRESHOLD and cc_val >= _CC_THRESHOLD:
+            if cov < max_coverage and cc_val >= min_cc:
                 results.append({"file": filepath, "coverage_pct": cov, "cc": cc_val})
 
         results.sort(key=lambda x: x["cc"], reverse=True)

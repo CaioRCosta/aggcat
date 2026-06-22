@@ -12,10 +12,6 @@ from src.tools.lizard_tool import LizardTool
 _PYDRILLER = PyDrillerTool()
 _LIZARD = LizardTool()
 
-_CHURN_THRESHOLD = 5
-_CC_THRESHOLD = 10
-
-
 class HotspotsReport(CompositeReport):
     @property
     def name(self) -> str:
@@ -26,27 +22,30 @@ class HotspotsReport(CompositeReport):
         return "Files with high churn AND high complexity — highest refactoring risk."
 
     @property
+    def defaults(self) -> Dict[str, Any]:
+        return {"min_churn": 5, "min_cc": 10}
+
+    @property
     def depends_on(self) -> List:
         return [_PYDRILLER, _LIZARD]
 
     def run(self, static: Dict[str, Any]) -> List[Dict[str, Any]]:
+        min_churn = self._get_config("min_churn")
+        min_cc = self._get_config("min_cc")
         churn = {r["file"]: r["churn"] for r in static.get("pydriller", [])}
-        # lizard file field is "path:line" — extract just the path
         cc: Dict[str, int] = {}
         for r in static.get("lizard", []):
             filepath = r["file"].split(":")[0]
-            # keep highest CC per file
             cc[filepath] = max(cc.get(filepath, 0), _extract_cc(r["issue"]))
 
         results = []
         for filepath, churn_count in churn.items():
-            # normalize path prefix
             norm = filepath.lstrip("./")
             match = next((p for p in cc if p.lstrip("./") == norm), None)
             if match is None:
                 continue
             cc_val = cc[match]
-            if churn_count >= _CHURN_THRESHOLD and cc_val >= _CC_THRESHOLD:
+            if churn_count >= min_churn and cc_val >= min_cc:
                 results.append({"file": norm, "churn": churn_count, "cc": cc_val})
 
         results.sort(key=lambda x: x["churn"], reverse=True)

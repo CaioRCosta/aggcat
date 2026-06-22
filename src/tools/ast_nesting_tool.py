@@ -6,7 +6,6 @@ from rich.table import Table
 from rich import box
 
 from src.base_tool import BaseTool
-from src.config import load_config
 
 class NestingDepthVisitor(ast.NodeVisitor):
     def __init__(self):
@@ -39,10 +38,6 @@ class AstNestingTool(BaseTool):
         return {
             "max_depth": 3,
         }
-
-    def _get_config(self, key: str) -> Any:
-        user_config = load_config()
-        return user_config.get(self.name, {}).get(key, self.defaults.get(key))
 
     def run(self, repo_path: Path) -> List[Dict[str, Any]]:
         max_depth = self._get_config("max_depth")

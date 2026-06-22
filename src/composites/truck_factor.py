@@ -10,9 +10,6 @@ from src.tools.gitpython_tool import GitPythonTool
 
 _GITPYTHON = GitPythonTool()
 
-_AUTHOR_THRESHOLD = 2
-
-
 class TruckFactorReport(CompositeReport):
     @property
     def name(self) -> str:
@@ -23,13 +20,18 @@ class TruckFactorReport(CompositeReport):
         return "Files concentrated in few developers — bus factor risk."
 
     @property
+    def defaults(self) -> Dict[str, Any]:
+        return {"max_authors": 2}
+
+    @property
     def depends_on(self) -> List:
         return [_GITPYTHON]
 
     def run(self, static: Dict[str, Any]) -> List[Dict[str, Any]]:
+        max_authors = self._get_config("max_authors")
         results = [
             r for r in static.get("gitpython", [])
-            if r["authors"] <= _AUTHOR_THRESHOLD
+            if r["authors"] <= max_authors
         ]
         results.sort(key=lambda x: (x["authors"], -x["commits"]))
         return results
