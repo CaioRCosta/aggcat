@@ -6,7 +6,7 @@
 [![Commits](https://img.shields.io/github/commit-activity/t/CaioRCosta/aggcat?label=commits&style=flat)](https://github.com/CaioRCosta/aggcat/commits/main)
 [![Contributors](https://img.shields.io/github/contributors/CaioRCosta/aggcat?style=flat)](https://github.com/CaioRCosta/aggcat/graphs/contributors)
 [![Pull Requests](https://img.shields.io/github/issues-pr/CaioRCosta/aggcat?label=pull%20requests&style=flat)](https://github.com/CaioRCosta/aggcat/pulls)
-[![Tests](https://img.shields.io/badge/tests-57%20passing-brightgreen?style=flat)](#running-tests-locally)
+[![Tests](https://img.shields.io/badge/tests-262%20passing-brightgreen?style=flat)](#running-tests-locally)
 
 ---
 
@@ -70,7 +70,7 @@ It targets **software maintenance and evolution** problems by mining repository 
 
 ```bash
 # Clone the repository
-git clone https://github.com/<your-org>/aggcat.git
+git clone https://github.com/CaioRCosta/aggcat.git
 cd aggcat
 
 # Install in editable mode with all dependencies
@@ -92,8 +92,8 @@ aggcat --help
 | Command | Description |
 |:---|:---|
 | `aggcat analyze <repo>` | Analyze a local Git repository |
-| `aggcat config show` | Show current tool configuration |
-| `aggcat config set <tool> <key> <value>` | Override a tool configuration constant |
+| `aggcat config show` | Show current configuration for all tools and composites |
+| `aggcat config set <name> <key> <value>` | Override a configuration constant |
 | `aggcat config reset` | Reset all configuration to defaults |
 | `aggcat version` | Print the installed version |
 
@@ -111,7 +111,31 @@ aggcat analyze [OPTIONS] REPO
 | `--top-n` | `-n` | all | Limit results to top N items per section |
 | `--all` | `-a` | `false` | Run all tools, skipping the interactive selector |
 
-By default, `aggcat analyze` opens an **interactive tool selector** where you can pick which tools to run using arrow keys, Space to toggle, and Enter to confirm.
+By default, `aggcat analyze` opens an **interactive tool selector** where you can pick which tools and composite reports to run using arrow keys, Space to toggle, and Enter to confirm. Tools are grouped into two sections:
+
+```
+── Tools ──────────────────────────────────────
+> [✔] radon           - Calculates the Maintainability Index...
+  [✔] bandit          - Detects security vulnerabilities...
+  ...
+── Composite Reports ──────────────────────────
+  [✔] hotspots        - Files with high churn AND high complexity... [uses: pydriller, lizard]
+  [✔] truck_factor    - Files concentrated in few developers... [uses: gitpython]
+  ...
+```
+
+A **progress bar** is shown during analysis, indicating the current tool being executed.
+
+#### GitHub metrics
+
+GitHub process metrics are fetched automatically when a `GITHUB_TOKEN` environment variable is set and the repository has a GitHub remote origin configured in `.git/config`. No flags needed — the slug is detected automatically.
+
+```bash
+export GITHUB_TOKEN=ghp_yourtoken
+aggcat analyze /path/to/repo
+```
+
+If no token is provided, the GitHub tool is shown in the selector as unavailable (greyed out).
 
 #### Examples
 
@@ -133,70 +157,57 @@ aggcat analyze /path/to/repo --top-n 10
 
 # Skip selector, limit to top 5, output HTML
 aggcat analyze /path/to/repo --all --top-n 5 --output html
-
-# GitHub API metrics are fetched automatically when GITHUB_TOKEN is set
-# and the repository has a GitHub remote origin configured
-export GITHUB_TOKEN=your_token_here
-aggcat analyze /path/to/repo
 ```
 
 ---
 
 ### `aggcat config`
 
-Some tools expose configurable thresholds and constants that you can tune per-project.
+Tools and composite reports expose configurable thresholds you can tune per-project.
 
 ```bash
 # See all configurable values and their current/default state
 aggcat config show
 
 # Override a value (cast automatically to the correct type)
-aggcat config set lizard max_ccn 15
-aggcat config set radon mi_threshold 65.0
+aggcat config set lizard cc_low 15
+aggcat config set radon mi_grade_a 85.0
+aggcat config set hotspots min_churn 3
+aggcat config set truck_factor max_authors 3
 
 # Reset everything back to defaults
 aggcat config reset
 ```
 
----
+#### Configurable constants
 
-### Example terminal output
-
-```
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  aggcat report — my-project
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  🔴 Hotspots (high churn + high complexity)
-     src/core/parser.py   churn=42  CC=18
-     src/api/handler.py   churn=31  CC=14
-
-  🟡 Truck Factor Risk
-     src/db/models.py     authors=1  commits=87
-
-  🟢 Maintainability
-     src/utils/helpers.py  MI=82.4  (Good)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-```
+| Tool / Composite | Key | Default | Description |
+|:---|:---|:---|:---|
+| `radon` | `mi_grade_a` | `80.0` | MI score threshold for grade A |
+| `radon` | `mi_grade_b` | `60.0` | MI score threshold for grade B |
+| `radon` | `mi_grade_c` | `40.0` | MI score threshold for grade C |
+| `lizard` | `cc_low` | `10` | Cyclomatic complexity warning threshold |
+| `vulture` | `min_confidence` | `80` | Minimum confidence % for dead code findings |
+| `ast_nesting` | `max_depth` | `3` | Maximum allowed control-flow nesting depth |
+| `hotspots` | `min_churn` | `5` | Minimum commit churn to qualify as a hotspot |
+| `hotspots` | `min_cc` | `10` | Minimum cyclomatic complexity for hotspot |
+| `truck_factor` | `max_authors` | `2` | Maximum authors before a file is excluded from risk |
+| `uncovered_complex` | `max_coverage` | `60.0` | Coverage % below which a file is considered under-tested |
+| `uncovered_complex` | `min_cc` | `10` | Minimum CC to flag as uncovered-complex |
+| `bandit_risk` | `min_cc` | `1` | Minimum CC for a security finding to appear in the report |
 
 ---
 
-## Running Tests Locally
+## Composite Reports
 
-```bash
-# Install dev dependencies
-pip install -e ".[dev]"
+Composite reports combine the output of multiple base tools to surface cross-cutting insights that no single tool can provide alone.
 
-# Run all tests
-pytest tests/
-
-# Run with coverage report
-pytest tests/ --cov=aggcat --cov-report=term-missing
-
-# Run a specific test file
-pytest tests/test_infrastructure.py -v
-```
-
-Tests are also executed automatically on every push and pull request via GitHub Actions (see `.github/workflows/ci.yml`).
+| Report | Depends on | What it surfaces |
+|:---|:---|:---|
+| 🔴 **Hotspots** | PyDriller × Lizard | Files with high churn **and** high complexity — highest refactoring risk |
+| 🟡 **Truck Factor** | GitPython | Files concentrated in ≤ N developers — bus factor risk |
+| ⚠️ **Uncovered Complex** | coverage.py × Lizard | Complex files with low test coverage — highest risk to change |
+| 🛡️ **Bandit Risk** | Bandit × Lizard | Security issues ranked by file complexity — harder-to-fix flaws first |
 
 ---
 
@@ -218,5 +229,25 @@ Tests are also executed automatically on every push and pull request via GitHub 
 | **12** | **pip-audit** | Security | Known vulnerabilities in dependencies (CVEs) | **External Risk Factor:** Complements Bandit (own code) with risks from the dependency chain |
 | **13** | **importlib** | Structure | Internal module dependency graph (coupling) | **Coupling Factor:** Detects modules with high fan-in/fan-out, candidates for breakpoints in refactoring |
 | **14** | **coverage.py** | Testing | Percentage of lines covered by automated tests | **Confidence Factor:** Crosses low coverage with high complexity (Lizard) to find critical unprotected zones |
+
+---
+
+## Running Tests Locally
+
+```bash
+# Install dev dependencies
+pip install -e ".[dev]"
+
+# Run all tests
+pytest tests/
+
+# Run with coverage report
+pytest tests/ --cov=src --cov-report=term-missing
+
+# Run a specific test file
+pytest tests/tools/test_bandit.py -v
+```
+
+Tests are also executed automatically on every push and pull request via GitHub Actions (see `.github/workflows/ci.yml`).
 
 ---
