@@ -7,7 +7,7 @@ from typer.testing import CliRunner
 
 import src.cli as cli_module
 import src.analyzer as analyzer_module
-from src.analyzer import TOOLS, _has_github_token
+from src.analyzer import SELECTABLE as TOOLS, _has_github_token
 from src.cli import app
 from src.pipeline import AnalysisResult
 
@@ -311,7 +311,7 @@ class TestSelectToolsUnavailable:
         patched_tools = TOOLS + [github_tool]
         env = {k: v for k, v in __import__("os").environ.items() if k != "GITHUB_TOKEN"}
         with patch.dict("os.environ", env, clear=True), \
-             patch("src.analyzer.TOOLS", patched_tools), \
+             patch("src.analyzer.SELECTABLE", patched_tools), \
              patch.object(cli_module, "get_char", side_effect=["\r"]):
             result = cli_module.select_tools_interactive()
         assert github_tool not in result
@@ -323,7 +323,7 @@ class TestSelectToolsUnavailable:
         # Navigate to last (unavailable) tool, press Space, then Enter — tool must still be absent
         keys = ["\x1b[A", " ", "\r"]
         with patch.dict("os.environ", env, clear=True), \
-             patch("src.analyzer.TOOLS", patched_tools), \
+             patch("src.analyzer.SELECTABLE", patched_tools), \
              patch.object(cli_module, "get_char", side_effect=keys):
             result = cli_module.select_tools_interactive()
         assert github_tool not in result
@@ -334,7 +334,7 @@ class TestSelectToolsUnavailable:
         env = {k: v for k, v in __import__("os").environ.items() if k != "GITHUB_TOKEN"}
         with patch.dict("os.environ", env, clear=True), \
              patch("sys.stdin") as mock_stdin, \
-             patch("src.analyzer.TOOLS", patched_tools):
+             patch("src.analyzer.SELECTABLE", patched_tools):
             mock_stdin.isatty.return_value = False
             result = cli_module.select_tools_interactive()
         assert github_tool not in result

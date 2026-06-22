@@ -1,9 +1,12 @@
 from abc import ABC, abstractmethod
-from pathlib import Path
-from typing import Any, Dict, List
+from typing import List, Dict, Any, TYPE_CHECKING
 from rich.console import Console
 
-class BaseTool(ABC):
+if TYPE_CHECKING:
+    from src.base_tool import BaseTool
+
+
+class CompositeReport(ABC):
     @property
     @abstractmethod
     def name(self) -> str:
@@ -15,23 +18,23 @@ class BaseTool(ABC):
         pass
 
     @property
-    def defaults(self) -> Dict[str, Any]:
-        return {}
+    @abstractmethod
+    def depends_on(self) -> List["BaseTool"]:
+        """BaseTool instances this report requires."""
+        pass
 
     @property
     def requires_github(self) -> bool:
-        return False
-
-    @property
-    def renderable(self) -> bool:
-        return type(self).render_terminal is not BaseTool.render_terminal
+        return any(t.requires_github for t in self.depends_on)
 
     @abstractmethod
-    def run(self, repo_path: Path) -> List[Dict[str, Any]]:
+    def run(self, static: Dict[str, Any]) -> List[Dict[str, Any]]:
         pass
 
+    @abstractmethod
     def render_terminal(self, data: List[Dict[str, Any]], console: Console, top_n: int | None) -> None:
         pass
 
+    @abstractmethod
     def render_html_section(self, data: List[Dict[str, Any]], top_n: int | None) -> str:
-        return ""
+        pass

@@ -7,22 +7,34 @@ from src.tools.flake8_tool import Flake8Tool
 from src.tools.lizard_tool import LizardTool
 from src.tools.ast_nesting_tool import AstNestingTool
 
-TOOLS = [
+# All BaseTool instances — includes non-renderable data-only tools added in future phases
+ALL_BASE_TOOLS = [
     RadonTool(),
     BanditTool(),
     VultureTool(),
     Flake8Tool(),
     LizardTool(),
-    AstNestingTool()
+    AstNestingTool(),
 ]
+
+# Composite reports — populated as Phase 4 tools are implemented
+COMPOSITE_REPORTS = []
+
+# What appears in the interactive selector: renderable base tools + all composites
+SELECTABLE = [t for t in ALL_BASE_TOOLS if t.renderable] + COMPOSITE_REPORTS
+
+# Legacy alias used by report.py and tests
+TOOLS = SELECTABLE
+
 
 def _has_github_token() -> bool:
     return bool(os.environ.get("GITHUB_TOKEN", "").strip())
 
+
 def run(repo_path: str | Path, selected_tools: list = None) -> dict:
     path = Path(repo_path).resolve()
     has_token = _has_github_token()
-    tools_to_run = selected_tools if selected_tools is not None else TOOLS
+    tools_to_run = selected_tools if selected_tools is not None else ALL_BASE_TOOLS
     results = {}
     for tool in tools_to_run:
         if tool.requires_github and not has_token:

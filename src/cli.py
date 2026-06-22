@@ -1,8 +1,11 @@
 import sys
+from importlib.metadata import version as pkg_version
 import typer
 from rich.console import Console
 
 from src import pipeline, report
+from src.config import load_config, save_config, reset_config
+from src.analyzer import TOOLS, SELECTABLE, ALL_BASE_TOOLS, _has_github_token
 
 try:
     import tty
@@ -29,8 +32,6 @@ app.add_typer(config_app)
 @config_app.command("show")
 def config_show() -> None:
     """Show the current configuration for all tools."""
-    from src.config import load_config
-    from src.analyzer import TOOLS
     user_config = load_config()
     console.print("[bold cyan]Current Tool Configurations:[/bold cyan]")
     for tool in TOOLS:
@@ -50,9 +51,6 @@ def config_set(
     value: str = typer.Argument(..., help="The value to set (will be cast dynamically to float/int/str)."),
 ) -> None:
     """Set a configuration constant for a tool."""
-    from src.config import load_config, save_config
-    from src.analyzer import TOOLS
-    
     # Find the tool in the registry
     target_tool = next((t for t in TOOLS if t.name == tool), None)
     if not target_tool or not getattr(target_tool, "defaults", None):
@@ -86,7 +84,6 @@ def config_set(
 @config_app.command("reset")
 def config_reset() -> None:
     """Reset configuration to defaults."""
-    from src.config import reset_config
     reset_config()
     console.print("[green]✓ Configuration reset to defaults.[/green]")
 
@@ -110,19 +107,18 @@ def get_char() -> str:
 
 
 def select_tools_interactive() -> list:
-    from src.analyzer import TOOLS, _has_github_token
     if not sys.stdin.isatty():
-        return [t for t in TOOLS if not t.requires_github or _has_github_token()]
+        return [t for t in SELECTABLE if not t.requires_github or _has_github_token()]
 
     has_token = _has_github_token()
-    unavailable = [t.requires_github and not has_token for t in TOOLS]
+    unavailable = [t.requires_github and not has_token for t in SELECTABLE]
     selected = [not u for u in unavailable]
     current_idx = 0
 
     console.print("[bold cyan]Select tools to run (Arrow Keys to navigate, Space to toggle, Enter to confirm):[/bold cyan]\n")
 
     def render_menu():
-        for i, tool in enumerate(TOOLS):
+        for i, tool in enumerate(SELECTABLE):
             if unavailable[i]:
                 cursor = "  "
                 chk = "[dim]–[/dim]"
@@ -155,14 +151,14 @@ def select_tools_interactive() -> list:
             render_menu()
             ch = get_char()
 
-            for _ in range(len(TOOLS)):
+            for _ in range(len(SELECTABLE)):
                 sys.stdout.write("\033[F\033[K")
             sys.stdout.flush()
 
             if ch == '\x1b[A':  # Up
-                current_idx = (current_idx - 1) % len(TOOLS)
+                current_idx = (current_idx - 1) % len(SELECTABLE)
             elif ch == '\x1b[B':  # Down
-                current_idx = (current_idx + 1) % len(TOOLS)
+                current_idx = (current_idx + 1) % len(SELECTABLE)
             elif ch == ' ':  # Space — ignore unavailable tools
                 if not unavailable[current_idx]:
                     selected[current_idx] = not selected[current_idx]
@@ -179,7 +175,7 @@ def select_tools_interactive() -> list:
         sys.stdout.write("\033[?25h")
         sys.stdout.flush()
 
-    chosen = [tool for i, tool in enumerate(TOOLS) if selected[i]]
+    chosen = [tool for i, tool in enumerate(SELECTABLE) if selected[i]]
     if not chosen:
         console.print("[red]Error: You must select at least one tool to run.[/red]")
         raise typer.Exit(code=1)
@@ -209,10 +205,9 @@ def analyze(
         help="Run all tools without the interactive selector.",
     ),
 ) -> None:
-    from src.analyzer import TOOLS
-    selected_tools = TOOLS if all_tools else select_tools_interactive()
+    selected = SELECTABLE if all_tools else select_tools_interactive()
 
-    result = pipeline.run(repo, selected_tools=selected_tools)
+    result = pipeline.run(repo, selected=selected)
 
     if output == "terminal":
         report.render_terminal(result, top_n=top_n)
@@ -230,8 +225,6 @@ def analyze(
 
 @app.command()
 def version() -> None:
-    from importlib.metadata import version as pkg_version
-
     try:
         v = pkg_version("aggcat")
     except Exception:

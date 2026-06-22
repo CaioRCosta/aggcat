@@ -9,6 +9,8 @@ from rich import box
 from rich.text import Text
 
 from src.pipeline import AnalysisResult
+from src.base_tool import BaseTool
+from src.base_composite import CompositeReport
 
 console = Console()
 
@@ -118,10 +120,15 @@ def render_terminal(result: AnalysisResult, top_n: int | None = None) -> None:
     hotspots = git.get("hotspots", [])
     truck = git.get("truck_factor", [])
 
-    from src.analyzer import TOOLS
+    renderables = result.selected_renderables
+    base_tools = [t for t in renderables if isinstance(t, BaseTool)]
+    composites = [t for t in renderables if isinstance(t, CompositeReport)]
 
-    # Check if there is any data
-    has_data = any([hotspots, truck]) or any(static.get(tool.name) for tool in TOOLS)
+    has_data = (
+        any([hotspots, truck])
+        or any(static.get(t.name) for t in base_tools)
+        or any(result.composite.get(c.name) for c in composites)
+    )
 
     if not has_data:
         console.print("[dim]No data available yet. Make sure the analysis modules are connected.[/dim]")
@@ -129,12 +136,18 @@ def render_terminal(result: AnalysisResult, top_n: int | None = None) -> None:
         _render_hotspots(hotspots, top_n)
         console.print()
         _render_truck_factor(truck, top_n)
-        
-        for tool in TOOLS:
+
+        for tool in base_tools:
             tool_data = static.get(tool.name, [])
             if tool_data:
                 console.print()
                 tool.render_terminal(tool_data, console, top_n)
+
+        for composite in composites:
+            composite_data = result.composite.get(composite.name, [])
+            if composite_data:
+                console.print()
+                composite.render_terminal(composite_data, console, top_n)
 
     if top_n is not None:
         console.print(
@@ -150,6 +163,7 @@ def render_json(result: AnalysisResult, top_n: int | None = None) -> None:
     data: dict[str, Any] = {
         "repo": result.repo_path,
         "static": result.static,
+        "composite": result.composite,
         "git": result.git,
         "errors": result.errors,
     }
@@ -158,11 +172,10 @@ def render_json(result: AnalysisResult, top_n: int | None = None) -> None:
         for section in ("hotspots", "truck_factor"):
             if section in data["git"]:
                 data["git"][section] = data["git"][section][:top_n]
-        
-        from src.analyzer import TOOLS
-        for tool in TOOLS:
-            if tool.name in data["static"]:
-                data["static"][tool.name] = data["static"][tool.name][:top_n]
+        for key in data["static"]:
+            data["static"][key] = data["static"][key][:top_n]
+        for key in data["composite"]:
+            data["composite"][key] = data["composite"][key][:top_n]
 
     output = json.dumps(data, indent=2, ensure_ascii=False)
     console.print(output)
@@ -190,13 +203,14 @@ def _build_html(result: AnalysisResult, top_n: int | None) -> str:
         git.get("truck_factor", []), ["file", "authors", "commits"]
     )
 
-    from src.analyzer import TOOLS
-    static_html_parts = []
-    for tool in TOOLS:
-        tool_data = static.get(tool.name, [])
-        static_html_parts.append(tool.render_html_section(tool_data, top_n))
-    
-    static_html = "\n\n".join(static_html_parts)
+    html_parts = []
+    for item in result.selected_renderables:
+        if isinstance(item, BaseTool):
+            html_parts.append(item.render_html_section(static.get(item.name, []), top_n))
+        elif isinstance(item, CompositeReport):
+            html_parts.append(item.render_html_section(result.composite.get(item.name, []), top_n))
+
+    static_html = "\n\n".join(p for p in html_parts if p)
 
     top_note = (
         f"<p class='note'>Showing top {top_n} results. "
