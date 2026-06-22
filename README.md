@@ -1,7 +1,7 @@
 # aggcat
 > A simple CLI to aggregate code analysis tools and metrics in one place.
 
-[![CI](https://github.com/CaioRCosta/aggcat/actions/workflows/ci.yml/badge.svg)](https://github.com/CaioRCosta/aggcat/actions/workflows/ci.yml)
+[![CI](https://github.com/CaioRCosta/aggcat/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/CaioRCosta/aggcat/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/CaioRCosta/aggcat/branch/main/graph/badge.svg)](https://codecov.io/gh/CaioRCosta/aggcat)
 [![Commits](https://img.shields.io/github/commit-activity/t/CaioRCosta/aggcat?label=commits&style=flat)](https://github.com/CaioRCosta/aggcat/commits/main)
 [![Contributors](https://img.shields.io/github/contributors/CaioRCosta/aggcat?style=flat)](https://github.com/CaioRCosta/aggcat/graphs/contributors)
