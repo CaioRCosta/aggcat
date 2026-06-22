@@ -6,7 +6,8 @@
 [![Commits](https://img.shields.io/github/commit-activity/t/CaioRCosta/aggcat?label=commits&style=flat)](https://github.com/CaioRCosta/aggcat/commits/main)
 [![Contributors](https://img.shields.io/github/contributors/CaioRCosta/aggcat?style=flat)](https://github.com/CaioRCosta/aggcat/graphs/contributors)
 [![Pull Requests](https://img.shields.io/github/issues-pr/CaioRCosta/aggcat?label=pull%20requests&style=flat)](https://github.com/CaioRCosta/aggcat/pulls)
-[![Tests](https://img.shields.io/badge/tests-262%20passing-brightgreen?style=flat)](#running-tests-locally)
+[![License](https://img.shields.io/github/license/CaioRCosta/aggcat?style=flat)](LICENSE)
+[![Last Commit](https://img.shields.io/github/last-commit/CaioRCosta/aggcat?style=flat)](https://github.com/CaioRCosta/aggcat/commits/main)
 
 ---
 
