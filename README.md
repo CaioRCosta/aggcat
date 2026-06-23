@@ -50,6 +50,7 @@ It targets **software maintenance and evolution** problems by mining repository 
 | **Style** | [Flake8](https://flake8.pycqa.org/) | PEP 8 violations and stylistic debt |
 | **Security** | [Bandit](https://bandit.readthedocs.io/) | Known security flaws in Python code |
 | **AST (Python)** | [Python AST](https://docs.python.org/3/library/ast.html) | Nesting depth, structural complexity |
+| **AST (multi-lang)** | [Tree-sitter](https://tree-sitter.github.io/) | Anti-pattern detection across languages |
 | **Dead code** | [Vulture](https://github.com/jendrikseipp/vulture) | Unused functions, variables and imports |
 | **Dependencies** | [pip-audit](https://github.com/pypa/pip-audit) | Known CVEs in project dependencies |
 | **Coupling** | [importlib](https://docs.python.org/3/library/importlib.html) | Module dependency graph (fan-in/fan-out) |
